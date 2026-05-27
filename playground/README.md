@@ -1,10 +1,6 @@
 # web-auto-form Playground
 
-Try web-auto-form instantly in your browser. Paste a JSON config, click Run, and see the results — no installation needed.
-
-## Online
-
-→ **[Launch on Hugging Face Spaces](https://huggingface.co/spaces/DUZ1287/web-auto-form)**
+Run the web-auto-form playground locally, or deploy your own to Hugging Face Spaces.
 
 ## Local
 
@@ -31,6 +27,4 @@ Then open <http://localhost:7860>.
 5. Add `web-auto-form` and `playwright` to `requirements.txt`
 6. The Space will auto-build and deploy
 
-Or use the Duplicate button:
-
-[![Duplicate Space](https://huggingface.co/datasets/huggingface/badges/raw/main/duplicate-this-space-sm.svg)](https://huggingface.co/spaces/DUZ1287/web-auto-form?duplicate=true)
+Once deployed, you'll get your own URL like `https://huggingface.co/spaces/<your-username>/web-auto-form-playground` that anyone can use.

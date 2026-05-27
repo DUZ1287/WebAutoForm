@@ -16,7 +16,7 @@
 ### 什么时候用哪个？
 
 | 维度 | web-auto-form | Playwright | Selenium | Browser-Use |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | **工作方式** | JSON 配置 | 编写代码 | 编写代码 | 自然语言 |
 | **学习曲线** | 零门槛 | 中等 | 陡峭 | 零门槛 |
 | **最适合** | 批量表单填写、数据录入、注册自动化、CI 表单测试、LLM Agent 工具 | 现代 Web 测试、复杂 SPA 场景 | 遗留企业系统、跨浏览器测试 | 一次性探索任务、调研爬取 |
@@ -41,7 +41,7 @@
 ## 功能特性
 
 | 特性 | 说明 |
-|---|---|
+| --- | --- |
 | **13 种动作** | navigate, fill, select, check, click, upload, wait, scroll, extract, press_key, handle_dialog, if, assert |
 | **模板变量** | `{{user.name}}` 语法，支持嵌套点号访问 |
 | **选择器回退** | 主选择器 + 备用链，DOM 变化时自动容错 |
@@ -153,7 +153,7 @@ print(result["extracted"])    # {"字段名": "提取的值", ...}
 ### 顶层字段
 
 | 字段 | 类型 | 必填 | 说明 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `url` | string | 是 | 起始 URL |
 | `consent_statement` | string | 是 | 自动化目的声明（记录在日志中，有头模式下展示并确认） |
 | `steps` | StepConfig[] | 是 | 有序动作列表（1–50 步） |
@@ -164,7 +164,7 @@ print(result["extracted"])    # {"字段名": "提取的值", ...}
 ### 全局选项
 
 | 选项 | 默认值 | 说明 |
-|---|---|---|
+| --- | --- | --- |
 | `headless` | `true` | 无头模式运行浏览器 |
 | `viewport_width` | `1280` | 浏览器视口宽度 |
 | `viewport_height` | `800` | 浏览器视口高度 |
@@ -182,7 +182,7 @@ print(result["extracted"])    # {"字段名": "提取的值", ...}
 ### 导航与交互
 
 | 动作 | 说明 | 必填字段 |
-|---|---|---|
+| --- | --- | --- |
 | `navigate` | 打开 URL | `value` (URL) |
 | `fill` | 在输入框中输入文本 | `selector`, `value` |
 | `click` | 点击元素 | `selector` |
@@ -196,7 +196,7 @@ print(result["extracted"])    # {"字段名": "提取的值", ...}
 ### 流程控制
 
 | 动作 | 说明 | 关键字段 |
-|---|---|---|
+| --- | --- | --- |
 | `wait` | 等待元素、导航、超时或 JS 表达式 | `type`, `selector` 或 `value` |
 | `if` | 条件分支 | `condition`, `then`, `else`（可选） |
 | `assert` | 验证元素状态并支持重试 | `selector`, `state`, `on_fail` |
@@ -204,7 +204,7 @@ print(result["extracted"])    # {"字段名": "提取的值", ...}
 ### 等待子类型
 
 | 类型 | 行为 | `value` |
-|---|---|---|
+| --- | --- | --- |
 | `element`（默认） | 轮询直到选择器出现 | — |
 | `navigation` | 等待页面加载 | — |
 | `timeout` | 无条件等待 | 毫秒数字符串（如 `"3000"`） |
@@ -231,7 +231,7 @@ print(result["extracted"])    # {"字段名": "提取的值", ...}
 选择器通过前缀自动检测类型，也可显式设置 `selector_type`。
 
 | 前缀 | 类型 |
-|---|---|
+| --- | --- |
 | `//` | XPath |
 | `#` | ID |
 | `[name=` | name 属性 |
@@ -280,7 +280,7 @@ web-auto-form 内置了作为 LLM 工具调用所需的全部资源：
 ## 示例
 
 | 示例 | 说明 |
-|---|---|
+| --- | --- |
 | [job_application.json](examples/job_application.json) | 完整工作流：模板、条件、断言、回退、文件上传 |
 | [google_form.json](examples/google_form.json) | 最小示例：填写 + 点击 + 导航等待 |
 | [conditional_form.json](examples/conditional_form.json) | 条件分支：嵌套 if/else、基于值的条件、多重断言与重试 |
@@ -303,7 +303,7 @@ web-auto-form 内置了作为 LLM 工具调用所需的全部资源：
 ## 开发
 
 ```bash
-git clone https://github.com/DUZ1287/web-auto-form.git
+git clone https://github.com/DUZ1287/WebAutoForm.git
 cd web-auto-form
 
 make dev          # 安装依赖 + Playwright Chromium
@@ -330,11 +330,7 @@ python -m pytest -v
 
 ## 在线 Playground
 
-无需安装，在浏览器中即时体验 web-auto-form。
-
-→ **[启动 Playground](https://huggingface.co/spaces/DUZ1287/web-auto-form)**（Hugging Face Spaces）
-
-也可以本地运行：
+本地运行 Playground，或一键部署到 Hugging Face Spaces —— 详见 [playground/README.md](playground/README.md)。
 
 ```bash
 pip install gradio

@@ -41,7 +41,7 @@ Most browser automation tools force you to write code. **web-auto-form** is diff
 ## Features
 
 | Feature | Description |
-|---|---|
+| --- | --- |
 | **13 action types** | navigate, fill, select, check, click, upload, wait, scroll, extract, press_key, handle_dialog, if, assert |
 | **Template variables** | `{{user.name}}` syntax with nested dot-notation from a `data` object |
 | **Selector fallbacks** | Primary selector + backup chain — resilient to DOM changes |
@@ -153,7 +153,7 @@ print(result["extracted"])    # {"field_name": "extracted value", ...}
 ### Top-level fields
 
 | Field | Type | Required | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `url` | string | Yes | Starting URL |
 | `consent_statement` | string | Yes | Automation purpose declaration (logged + displayed in headed mode) |
 | `steps` | StepConfig[] | Yes | Ordered list of actions (1–50) |
@@ -164,7 +164,7 @@ print(result["extracted"])    # {"field_name": "extracted value", ...}
 ### Global options
 
 | Option | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `headless` | `true` | Run browser in headless mode |
 | `viewport_width` | `1280` | Browser viewport width |
 | `viewport_height` | `800` | Browser viewport height |
@@ -182,7 +182,7 @@ print(result["extracted"])    # {"field_name": "extracted value", ...}
 ### Navigation & Interaction
 
 | Action | Description | Required |
-|---|---|---|
+| --- | --- | --- |
 | `navigate` | Open a URL | `value` (URL) |
 | `fill` | Type text into an input | `selector`, `value` |
 | `click` | Click an element | `selector` |
@@ -196,7 +196,7 @@ print(result["extracted"])    # {"field_name": "extracted value", ...}
 ### Flow Control
 
 | Action | Description | Key Fields |
-|---|---|---|
+| --- | --- | --- |
 | `wait` | Wait for element, navigation, timeout, or JS expression | `type`, `selector` or `value` |
 | `if` | Conditional branching | `condition`, `then`, `else` (optional) |
 | `assert` | Verify element state with retry | `selector`, `state`, `on_fail` |
@@ -204,7 +204,7 @@ print(result["extracted"])    # {"field_name": "extracted value", ...}
 ### Wait subtypes
 
 | Type | Behavior | `value` |
-|---|---|---|
+| --- | --- | --- |
 | `element` (default) | Poll until selector appears | — |
 | `navigation` | Wait for page load | — |
 | `timeout` | Unconditional sleep | Duration in ms as string (e.g. `"3000"`) |
@@ -231,7 +231,7 @@ print(result["extracted"])    # {"field_name": "extracted value", ...}
 Selectors are auto-detected by prefix. You can also set `selector_type` explicitly.
 
 | Prefix | Type |
-|---|---|
+| --- | --- |
 | `//` | XPath |
 | `#` | ID |
 | `[name=` | name attribute |
@@ -280,7 +280,7 @@ See [docs/AI_AGENT_INTEGRATION.md](docs/AI_AGENT_INTEGRATION.md) for a step-by-s
 ## Examples
 
 | Example | Description |
-|---|---|
+| --- | --- |
 | [job_application.json](examples/job_application.json) | Full workflow: templates, conditionals, assertions, fallbacks, file upload |
 | [google_form.json](examples/google_form.json) | Minimal example: fill + click + navigation wait |
 | [conditional_form.json](examples/conditional_form.json) | Nested if/else, value-based conditions, multi-assert with retry |
@@ -303,7 +303,7 @@ See [docs/AI_AGENT_INTEGRATION.md](docs/AI_AGENT_INTEGRATION.md) for a step-by-s
 ## Development
 
 ```bash
-git clone https://github.com/DUZ1287/web-auto-form.git
+git clone https://github.com/DUZ1287/WebAutoForm.git
 cd web-auto-form
 
 make dev          # install deps + Playwright Chromium
@@ -330,11 +330,7 @@ python -m pytest -v
 
 ## Online Playground
 
-Try web-auto-form instantly in your browser — no installation needed.
-
-→ **[Launch Playground](https://huggingface.co/spaces/DUZ1287/web-auto-form)** (Hugging Face Spaces)
-
-You can also run it locally:
+Run the playground locally, or deploy your own to Hugging Face Spaces in one click — see [playground/README.md](playground/README.md).
 
 ```bash
 pip install gradio

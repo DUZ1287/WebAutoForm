@@ -56,10 +56,10 @@ all = [
 web_auto_form = "web_auto_form.cli:cli"
 
 [project.urls]
-Homepage = "https://github.com/DUZ1287/web-auto-form"
-Documentation = "https://github.com/DUZ1287/web-auto-form/tree/main/docs"
-Repository = "https://github.com/DUZ1287/web-auto-form"
-Issues = "https://github.com/DUZ1287/web-auto-form/issues"
+Homepage = "https://github.com/DUZ1287/WebAutoForm"
+Documentation = "https://github.com/DUZ1287/WebAutoForm/tree/main/docs"
+Repository = "https://github.com/DUZ1287/WebAutoForm"
+Issues = "https://github.com/DUZ1287/WebAutoForm/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
