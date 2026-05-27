@@ -1,0 +1,83 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "web-auto-form"
+version = "0.1.0"
+description = "Production-ready browser automation for form filling, submission, and data extraction."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [{name = "WebAutoForm Contributors"}]
+keywords = ["automation", "browser", "form", "playwright", "web"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Internet :: WWW/HTTP",
+]
+dependencies = [
+    "playwright>=1.40.0",
+    "pydantic>=2.5.0",
+    "click>=8.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-httpserver>=1.0.8",
+    "black>=23.0",
+    "isort>=5.12",
+    "flake8>=6.0",
+    "mypy>=1.7",
+    "mcp>=1.0",
+]
+mcp = ["mcp>=1.0"]
+playground = ["gradio>=4.0"]
+all = [
+    "pytest>=7.4.0",
+    "pytest-httpserver>=1.0.8",
+    "black>=23.0",
+    "isort>=5.12",
+    "flake8>=6.0",
+    "mypy>=1.7",
+    "mcp>=1.0",
+    "gradio>=4.0",
+]
+
+[project.scripts]
+web_auto_form = "web_auto_form.cli:cli"
+
+[project.urls]
+Homepage = "https://github.com/DUZ1287/web-auto-form"
+Documentation = "https://github.com/DUZ1287/web-auto-form/tree/main/docs"
+Repository = "https://github.com/DUZ1287/web-auto-form"
+Issues = "https://github.com/DUZ1287/web-auto-form/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py39"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

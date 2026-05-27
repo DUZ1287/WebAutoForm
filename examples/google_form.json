@@ -1,0 +1,42 @@
+{
+  "url": "https://docs.google.com/forms/d/e/EXAMPLE/viewform",
+  "consent_statement": "Filling out a Google Form for personal data entry.",
+  "data": {
+    "name": "Alice",
+    "email": "alice@example.com"
+  },
+  "steps": [
+    {
+      "action": "fill",
+      "selector": "input[type='text']",
+      "value": "{{name}}",
+      "description": "Fill name field"
+    },
+    {
+      "action": "fill",
+      "selector": "input[type='email']",
+      "value": "{{email}}",
+      "description": "Fill email field"
+    },
+    {
+      "action": "click",
+      "selector": "div[role='radio']:first-child",
+      "description": "Select first radio option"
+    },
+    {
+      "action": "click",
+      "selector": "div[role='button']:has-text('Submit')",
+      "description": "Click submit"
+    },
+    {
+      "action": "wait",
+      "type": "navigation",
+      "timeout_ms": 10000,
+      "description": "Wait for confirmation page"
+    }
+  ],
+  "options": {
+    "headless": true,
+    "step_delay_ms": 300
+  }
+}

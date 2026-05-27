@@ -1,0 +1,184 @@
+{
+  "tool": "web_auto_form",
+  "input": {
+    "url": "https://example.com/apply",
+    "consent_statement": "Automating a job application form submission on example.com for the purpose of personal data entry.",
+    "data": {
+      "user": {
+        "name": "Zhang Wei",
+        "email": "zhangwei@example.com",
+        "phone": "+86 138-0000-1234"
+      },
+      "resume_path": "file:///documents/resume.pdf",
+      "target_position": "Software Engineer"
+    },
+    "steps": [
+      {
+        "action": "wait",
+        "selector": "form#application",
+        "type": "element",
+        "timeout_ms": 10000,
+        "description": "Wait for the application form to load"
+      },
+      {
+        "action": "fill",
+        "selector": "#fullname",
+        "value": "{{user.name}}",
+        "description": "Fill in full name for {{user.name}}"
+      },
+      {
+        "action": "fill",
+        "selector": "input[name='email']",
+        "value": "{{user.email}}",
+        "description": "Fill in email address"
+      },
+      {
+        "action": "fill",
+        "selector": "[placeholder='Phone number']",
+        "selector_fallbacks": ["input[type='tel']", "input[name='phone']", "[data-field='phone']"],
+        "value": "{{user.phone}}",
+        "optional": true,
+        "on_skip": "log",
+        "description": "Fill in phone (optional, with fallback selectors)"
+      },
+      {
+        "action": "select",
+        "selector": "#position",
+        "value": "{{target_position}}",
+        "description": "Select desired position"
+      },
+      {
+        "action": "if",
+        "condition": {
+          "selector": "#has_experience",
+          "state": "checked"
+        },
+        "then": [
+          {
+            "action": "fill",
+            "selector": "#years_experience",
+            "value": "5",
+            "description": "Fill years of experience"
+          },
+          {
+            "action": "fill",
+            "selector": "#company_name",
+            "value": "Previous Corp",
+            "description": "Fill previous company"
+          }
+        ],
+        "else": [
+          {
+            "action": "check",
+            "selector": "#fresh_graduate",
+            "value": "true",
+            "optional": true,
+            "description": "Mark as fresh graduate if option exists"
+          }
+        ],
+        "description": "Handle dynamic experience fields based on checkbox state"
+      },
+      {
+        "action": "if",
+        "condition": {
+          "selector": ".status-badge",
+          "attribute": "textContent",
+          "operator": "eq",
+          "expected_value": "Open"
+        },
+        "then": [
+          {
+            "action": "extract",
+            "selector": ".position-detail",
+            "description": "Extract position details when status is Open"
+          }
+        ],
+        "description": "Value-based condition: check if position status equals 'Open'"
+      },
+      {
+        "action": "wait",
+        "selector": "input[type='file']",
+        "type": "element",
+        "timeout_ms": 5000,
+        "description": "Wait for file input to be visible before upload"
+      },
+      {
+        "action": "upload",
+        "selector": "input[type='file']",
+        "value": "{{resume_path}}",
+        "file_name": "{{user.name}}_Resume.pdf",
+        "description": "Upload resume from predefined location"
+      },
+      {
+        "action": "check",
+        "selector": "#agree-terms",
+        "value": "true",
+        "description": "Agree to terms and conditions"
+      },
+      {
+        "action": "click",
+        "selector": "button[type='submit']",
+        "selector_fallbacks": ["input[type='submit']", "button:has-text('Submit')", "[data-testid='submit-btn']"],
+        "description": "Click submit button"
+      },
+      {
+        "action": "wait",
+        "type": "navigation",
+        "timeout_ms": 10000,
+        "description": "Wait for page navigation after submission"
+      },
+      {
+        "action": "assert",
+        "selector": ".error-message",
+        "state": "not_exist",
+        "on_fail": "abort",
+        "description": "Verify no validation errors appeared"
+      },
+      {
+        "action": "assert",
+        "selector": ".success-message",
+        "state": "visible",
+        "timeout_ms": 15000,
+        "on_fail": "retry",
+        "max_retries": 3,
+        "description": "Wait for confirmation message (retry up to 3 times)"
+      }
+    ],
+    "extract_schema": {
+      "fields": [
+        {
+          "name": "confirmation_message",
+          "selector": ".success-message",
+          "attribute": "text",
+          "redact": false
+        },
+        {
+          "name": "application_id",
+          "selector": ".app-id",
+          "attribute": "text",
+          "redact": false
+        },
+        {
+          "name": "user_email_displayed",
+          "selector": ".confirmation-email",
+          "attribute": "text",
+          "redact": true
+        }
+      ],
+      "screenshot": true
+    },
+    "options": {
+      "headless": false,
+      "step_delay_ms": 500,
+      "viewport_width": 1280,
+      "viewport_height": 900,
+      "sandbox": true,
+      "redact_pii": true,
+      "debug": false,
+      "debug_output_path": "./debug_apply_<timestamp>/",
+      "keep_open": false,
+      "max_retries": 1,
+      "retry_on": ["NETWORK_ERROR"]
+    }
+  }
+}

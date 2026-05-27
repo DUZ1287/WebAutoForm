@@ -1,0 +1,3 @@
+gradio>=4.0
+web-auto-form
+playwright>=1.40.0

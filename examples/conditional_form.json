@@ -1,0 +1,103 @@
+{
+  "url": "https://example.com/survey",
+  "consent_statement": "Filling out a conditional survey form.",
+  "data": {
+    "applicant_name": "Bob"
+  },
+  "steps": [
+    {
+      "action": "wait",
+      "selector": "form",
+      "type": "element",
+      "timeout_ms": 5000,
+      "description": "Wait for form"
+    },
+    {
+      "action": "fill",
+      "selector": "#name",
+      "value": "{{applicant_name}}",
+      "description": "Fill name"
+    },
+    {
+      "action": "if",
+      "condition": {
+        "selector": "#employment_status",
+        "attribute": "value",
+        "operator": "eq",
+        "expected_value": "employed"
+      },
+      "then": [
+        {
+          "action": "fill",
+          "selector": "#company",
+          "value": "Acme Corp",
+          "description": "Fill company name"
+        },
+        {
+          "action": "fill",
+          "selector": "#title",
+          "value": "Engineer",
+          "description": "Fill job title"
+        },
+        {
+          "action": "if",
+          "condition": {
+            "selector": "#has_team",
+            "state": "checked"
+          },
+          "then": [
+            {
+              "action": "fill",
+              "selector": "#team_size",
+              "value": "10",
+              "description": "Fill team size (nested conditional)"
+            }
+          ],
+          "description": "Nested: check if has team"
+        }
+      ],
+      "else": [
+        {
+          "action": "fill",
+          "selector": "#job_search_duration",
+          "value": "3 months",
+          "description": "Fill job search duration"
+        }
+      ],
+      "description": "Conditional based on employment status"
+    },
+    {
+      "action": "click",
+      "selector": "#submit",
+      "description": "Submit form"
+    },
+    {
+      "action": "assert",
+      "selector": ".success",
+      "state": "visible",
+      "timeout_ms": 10000,
+      "on_fail": "retry",
+      "max_retries": 2,
+      "description": "Assert success message appears"
+    },
+    {
+      "action": "assert",
+      "selector": ".error",
+      "state": "not_exist",
+      "on_fail": "continue",
+      "description": "Assert no error messages"
+    }
+  ],
+  "extract_schema": {
+    "fields": [
+      {"name": "result", "selector": ".result-text", "attribute": "text"},
+      {"name": "ref_number", "selector": ".ref-id", "attribute": "text", "redact": false}
+    ],
+    "screenshot": true
+  },
+  "options": {
+    "headless": true,
+    "step_delay_ms": 400,
+    "redact_pii": true
+  }
+}
