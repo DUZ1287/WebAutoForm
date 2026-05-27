@@ -1,7 +1,36 @@
 ---
 name: web-auto-form
 description: JSON 驱动的浏览器表单自动化工具，为 AI Agent 提供原生 function-calling 集成，支持表单填写、条件分支、数据提取与 PII 脱敏
+version: 1.0.0
 tags: [automation, browser, form, playwright, json-driven, ai-agent-tool]
+metadata:
+  clawdbot:
+    emoji: "🌐"
+    requires:
+      bins:
+        - python
+      env: []
+    os:
+      - darwin
+      - linux
+      - win32
+    homepage: https://github.com/DUZ1287/WebAutoForm
+    install:
+      - spec: "pip install web-auto-form"
+        type: pip
+      - spec: "playwright install chromium"
+        type: shell
+  openclaw:
+    emoji: "🌐"
+    requires:
+      bins:
+        - python
+      env: []
+    os:
+      - darwin
+      - linux
+      - win32
+    homepage: https://github.com/DUZ1287/WebAutoForm
 ---
 
 ## 概述
