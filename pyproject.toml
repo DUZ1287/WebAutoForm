@@ -37,7 +37,6 @@ dev = [
     "isort>=5.12",
     "flake8>=6.0",
     "mypy>=1.7",
-    "mcp>=1.0",
 ]
 mcp = ["mcp>=1.0"]
 playground = ["gradio>=4.0"]
