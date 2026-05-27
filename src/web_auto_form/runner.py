@@ -224,7 +224,10 @@ class Runner:
                 step_index=index,
                 action="if",
                 status="ok",
-                value=f"condition={condition_result}, branch={'then' if condition_result else 'else'}",
+                value=(
+                    f"condition={condition_result}, "
+                    f"branch={'then' if condition_result else 'else'}"
+                ),
             )
         )
 
