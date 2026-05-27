@@ -74,10 +74,12 @@ def run_upload(ctx: ActionContext) -> StepResult:
     try:
         if ctx.step.file_name:
             with open(local_path, "rb") as f:
-                file_payload = [{"name": ctx.step.file_name, "buffer": f.read()}]
+                payload: list[dict[str, str | bytes]] = [
+                    {"name": ctx.step.file_name or "", "buffer": f.read()}
+                ]
+                loc.set_input_files(payload, timeout=ctx.step.timeout_ms)  # type: ignore[arg-type]
         else:
-            file_payload = local_path
-        loc.set_input_files(file_payload, timeout=ctx.step.timeout_ms)
+            loc.set_input_files(local_path, timeout=ctx.step.timeout_ms)
     finally:
         if is_temp and os.path.exists(local_path):
             try:

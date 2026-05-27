@@ -303,7 +303,7 @@ class Runner:
                 from .selectors import resolve_selector
 
                 resolved = resolve_selector(selector)
-                loc = page.locator(resolved).first  # type: ignore[union-attr]
+                loc = page.locator(resolved).first  # type: ignore[attr-defined,union-attr]
 
                 if field.attribute == "text":
                     raw = loc.text_content() or ""

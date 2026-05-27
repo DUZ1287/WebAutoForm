@@ -14,7 +14,7 @@ def _check_state(page: object, selector: str, state: str, timeout_ms: int) -> bo
     from ..selectors import resolve_selector
 
     resolved = resolve_selector(selector)
-    loc = page.locator(resolved).first  # type: ignore[union-attr]
+    loc = page.locator(resolved).first  # type: ignore[attr-defined,union-attr]
 
     try:
         if state == "exist":
@@ -31,13 +31,13 @@ def _check_state(page: object, selector: str, state: str, timeout_ms: int) -> bo
             return True
         if state == "checked":
             loc.wait_for(state="attached", timeout=timeout_ms)
-            return loc.is_checked()
+            return bool(loc.is_checked())
         if state == "enabled":
             loc.wait_for(state="attached", timeout=timeout_ms)
-            return loc.is_enabled()
+            return bool(loc.is_enabled())
         if state == "disabled":
             loc.wait_for(state="attached", timeout=timeout_ms)
-            return loc.is_disabled()
+            return bool(loc.is_disabled())
     except Exception:
         return state in ("not_exist", "hidden")
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, Callable, Literal
 
 from playwright.sync_api import Page
 
@@ -37,7 +37,7 @@ class ActionContext:
     data: dict[str, Any] = field(default_factory=dict)
 
 
-def timed(fn: Any) -> Any:
+def timed(fn: Callable[[ActionContext], StepResult]) -> Callable[[ActionContext], StepResult]:
     """Decorator to measure execution time of an action function."""
     import functools
 

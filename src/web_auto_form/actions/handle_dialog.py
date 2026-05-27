@@ -11,9 +11,9 @@ def run_handle_dialog(ctx: ActionContext) -> StepResult:
 
     def _handler(dialog: object) -> None:
         if action_type == "accept":
-            dialog.accept()  # type: ignore[union-attr]
+            dialog.accept()  # type: ignore[attr-defined]
         else:
-            dialog.dismiss()  # type: ignore[union-attr]
+            dialog.dismiss()  # type: ignore[attr-defined]
         ctx.page.remove_listener("dialog", _handler)
 
     ctx.page.on("dialog", _handler)
