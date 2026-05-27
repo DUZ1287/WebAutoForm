@@ -22,7 +22,11 @@ MAX_NESTING_DEPTH = 3
 # ── Diagnostics JS snippet ────────────────────────────────────────────
 # Extracts visible form elements for Agent auto-repair when a step fails.
 _DIAGNOSTICS_JS = """() => {
-  const els = document.querySelectorAll('input, select, textarea, button, [role="button"], [role="radio"], [role="checkbox"], label');
+  const selector = (
+    'input, select, textarea, button, '
+    '[role="button"], [role="radio"], [role="checkbox"], label'
+  );
+  const els = document.querySelectorAll(selector);
   const seen = new Set();
   const items = [];
   els.forEach(el => {
@@ -215,12 +219,14 @@ class Runner:
         condition_result = evaluate_condition(ctx)
         branch = step.then_steps if condition_result else step.else_steps
 
-        self.results.append(StepResult(
-            step_index=index,
-            action="if",
-            status="ok",
-            value=f"condition={condition_result}, branch={'then' if condition_result else 'else'}",
-        ))
+        self.results.append(
+            StepResult(
+                step_index=index,
+                action="if",
+                status="ok",
+                value=f"condition={condition_result}, branch={'then' if condition_result else 'else'}",
+            )
+        )
 
         for sub_idx, sub_step in enumerate(branch):
             self._execute_step(sub_step, index, depth + 1)
