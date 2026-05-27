@@ -25,6 +25,8 @@ metadata:
     requires:
       bins:
         - python
+        - pip
+        - playwright
       env: []
     os:
       - darwin
