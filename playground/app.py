@@ -23,6 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import gradio as gr
+
 from web_auto_form import run
 
 # ── Preset Examples ─────────────────────────────────────────────────────────
@@ -56,17 +57,13 @@ PRESETS = {
             },
         ],
         "extract_schema": {
-            "fields": [
-                {"name": "flash_message", "selector": ".flash.success", "attribute": "text"}
-            ]
+            "fields": [{"name": "flash_message", "selector": ".flash.success", "attribute": "text"}]
         },
     },
     "Template Variables": {
         "url": "https://httpbin.org/forms/post",
         "consent_statement": "Playground demo: template variables.",
-        "data": {
-            "user": {"name": "Alice", "email": "alice@example.com", "phone": "555-0100"}
-        },
+        "data": {"user": {"name": "Alice", "email": "alice@example.com", "phone": "555-0100"}},
         "steps": [
             {"action": "fill", "selector": "input[name='custname']", "value": "{{user.name}}"},
             {"action": "fill", "selector": "input[name='custemail']", "value": "{{user.email}}"},
@@ -202,15 +199,13 @@ with gr.Blocks(
     theme=gr.themes.Soft(),
     css=CSS,
 ) as demo:
-    gr.Markdown(
-        """
+    gr.Markdown("""
 # 🧪 web-auto-form Playground
 
 **Paste a JSON config → Click Run → See results in a real browser.**
 
 No installation. No setup. Just JSON.
-"""
-    )
+""")
 
     with gr.Row():
         with gr.Column(scale=2):
@@ -231,9 +226,7 @@ No installation. No setup. Just JSON.
 
             with gr.Row():
                 run_btn = gr.Button("🚀 Run", variant="primary", size="lg")
-                headless_checkbox = gr.Checkbox(
-                    label="Headless mode", value=True
-                )
+                headless_checkbox = gr.Checkbox(label="Headless mode", value=True)
 
         with gr.Column(scale=3):
             gr.Markdown("### 📊 Results")
@@ -265,13 +258,11 @@ No installation. No setup. Just JSON.
         outputs=[steps_output, extracted_output, errors_output, raw_output],
     )
 
-    gr.Markdown(
-        """
+    gr.Markdown("""
 ---
 💡 **Tip**: Check out the [examples](../examples/) directory for more config ideas.
 Read the [docs](../docs/) for the full reference.
-"""
-    )
+""")
 
 if __name__ == "__main__":
     demo.launch()

@@ -11,7 +11,6 @@ from .click import run_click
 from .extract import run_extract
 from .fill import run_fill
 from .handle_dialog import run_handle_dialog
-from .if_branch import run_if
 from .navigate import run_navigate
 from .press_key import run_press_key
 from .scroll import run_scroll

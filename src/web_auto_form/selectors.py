@@ -5,7 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Literal
 
-from playwright.sync_api import Locator, Page, TimeoutError as PwTimeout
+from playwright.sync_api import Locator, Page
+from playwright.sync_api import TimeoutError as PwTimeout
 
 logger = logging.getLogger(__name__)
 

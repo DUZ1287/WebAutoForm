@@ -4,8 +4,6 @@ import pytest
 from pydantic import ValidationError
 
 from web_auto_form.models import (
-    ConditionConfig,
-    ExtractFieldConfig,
     OptionsConfig,
     StepConfig,
     WebAutoFormConfig,

@@ -18,7 +18,9 @@ def run_scroll(ctx: ActionContext) -> StepResult:
             ctx.page.mouse.wheel(0, pixels)
         except ValueError:
             return StepResult(
-                step_index=ctx.step_index, action="scroll", status="failed",
+                step_index=ctx.step_index,
+                action="scroll",
+                status="failed",
                 error=f"invalid scroll value: {value!r}",
             )
 

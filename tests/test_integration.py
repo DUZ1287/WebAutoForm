@@ -20,13 +20,23 @@ class TestIntegration:
             "url": mock_server,
             "consent_statement": "Integration test.",
             "steps": [
-                {"action": "wait", "selector": "form#application", "type": "element", "timeout_ms": 5000},
+                {
+                    "action": "wait",
+                    "selector": "form#application",
+                    "type": "element",
+                    "timeout_ms": 5000,
+                },
                 {"action": "fill", "selector": "#fullname", "value": "Test User"},
                 {"action": "fill", "selector": "input[name='email']", "value": "test@example.com"},
                 {"action": "select", "selector": "#position", "value": "eng"},
                 {"action": "check", "selector": "#agree-terms", "value": "true"},
                 {"action": "click", "selector": "#submit-btn"},
-                {"action": "wait", "selector": ".success-message", "type": "element", "timeout_ms": 5000},
+                {
+                    "action": "wait",
+                    "selector": ".success-message",
+                    "type": "element",
+                    "timeout_ms": 5000,
+                },
             ],
             "extract_schema": {
                 "fields": [
@@ -46,10 +56,18 @@ class TestIntegration:
             "url": mock_server,
             "consent_statement": "Integration test.",
             "steps": [
-                {"action": "wait", "selector": "form#application", "type": "element", "timeout_ms": 5000},
                 {
-                    "action": "fill", "selector": "#nonexistent",
-                    "value": "x", "optional": True, "on_skip": "log",
+                    "action": "wait",
+                    "selector": "form#application",
+                    "type": "element",
+                    "timeout_ms": 5000,
+                },
+                {
+                    "action": "fill",
+                    "selector": "#nonexistent",
+                    "value": "x",
+                    "optional": True,
+                    "on_skip": "log",
                     "timeout_ms": 1000,
                 },
                 {"action": "fill", "selector": "#fullname", "value": "OK"},
@@ -65,7 +83,12 @@ class TestIntegration:
             "url": mock_server,
             "consent_statement": "Integration test.",
             "steps": [
-                {"action": "wait", "selector": "form#application", "type": "element", "timeout_ms": 5000},
+                {
+                    "action": "wait",
+                    "selector": "form#application",
+                    "type": "element",
+                    "timeout_ms": 5000,
+                },
                 {
                     "action": "if",
                     "condition": {"selector": "#has_experience", "state": "checked"},

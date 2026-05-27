@@ -22,9 +22,19 @@ class StepConfig(BaseModel):
     """A single atomic browser operation."""
 
     action: Literal[
-        "navigate", "fill", "select", "check", "click", "upload",
-        "wait", "scroll", "extract", "press_key", "handle_dialog",
-        "if", "assert",
+        "navigate",
+        "fill",
+        "select",
+        "check",
+        "click",
+        "upload",
+        "wait",
+        "scroll",
+        "extract",
+        "press_key",
+        "handle_dialog",
+        "if",
+        "assert",
     ]
     selector: str | None = None
     selector_type: Literal["css", "xpath", "id", "name", "placeholder", "data-testid"] | None = None
@@ -33,7 +43,9 @@ class StepConfig(BaseModel):
     file_name: str | None = None
     timeout_ms: int = Field(default=5000, ge=0, le=60000)
     type: Literal["element", "navigation", "timeout", "function"] = "element"
-    state: Literal["exist", "not_exist", "visible", "hidden", "enabled", "disabled", "checked"] = "exist"
+    state: Literal["exist", "not_exist", "visible", "hidden", "enabled", "disabled", "checked"] = (
+        "exist"
+    )
     operator: Literal["eq", "ne", "contains", "matches_regex"] | None = None
     expected_value: str | None = None
     on_fail: Literal["abort", "continue", "retry"] = "abort"

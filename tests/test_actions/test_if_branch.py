@@ -46,8 +46,10 @@ class TestEvaluateCondition:
         step = StepConfig(
             action="if",
             condition=ConditionConfig(
-                selector=".status", attribute="textContent",
-                operator="eq", expected_value="Approved",
+                selector=".status",
+                attribute="textContent",
+                operator="eq",
+                expected_value="Approved",
             ),
             then=[StepConfig(action="click", selector="#x")],
         )
@@ -63,7 +65,9 @@ class TestEvaluateCondition:
         step = StepConfig(
             action="if",
             condition=ConditionConfig(
-                selector=".status", operator="contains", expected_value="approved",
+                selector=".status",
+                operator="contains",
+                expected_value="approved",
             ),
             then=[StepConfig(action="click", selector="#x")],
         )
@@ -79,7 +83,9 @@ class TestEvaluateCondition:
         step = StepConfig(
             action="if",
             condition=ConditionConfig(
-                selector=".status", operator="ne", expected_value="Approved",
+                selector=".status",
+                operator="ne",
+                expected_value="Approved",
             ),
             then=[StepConfig(action="click", selector="#x")],
         )

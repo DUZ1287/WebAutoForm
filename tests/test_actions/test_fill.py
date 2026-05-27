@@ -17,7 +17,10 @@ def _make_ctx(selector="#input", value="hello") -> ActionContext:
 
     step = StepConfig(action="fill", selector=selector, value=value)
     return ActionContext(
-        page=page, step=step, options=OptionsConfig(), step_index=0,
+        page=page,
+        step=step,
+        options=OptionsConfig(),
+        step_index=0,
     )
 
 

@@ -20,7 +20,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from web_auto_form import run
 
-
 WELCOME = """
 ╔══════════════════════════════════════════════════════════╗
 ║        web-auto-form — AI Agent Integration Demo         ║
@@ -34,8 +33,8 @@ DEMO_TASKS = {
     "1": {
         "label": "Fill a contact form",
         "task": "Fill the contact form at https://httpbin.org/forms/post "
-                "with name=Jane Doe, email=jane@example.com, "
-                "choose 'Support' from the department dropdown, and submit.",
+        "with name=Jane Doe, email=jane@example.com, "
+        "choose 'Support' from the department dropdown, and submit.",
         "config": {
             "url": "https://httpbin.org/forms/post",
             "consent_statement": "Demo: filling contact form with test data.",
@@ -46,7 +45,11 @@ DEMO_TASKS = {
             "steps": [
                 {"action": "fill", "selector": "input[name='custname']", "value": "{{name}}"},
                 {"action": "fill", "selector": "input[name='custemail']", "value": "{{email}}"},
-                {"action": "select", "selector": "select[name='custaddresstype']", "value": "business"},
+                {
+                    "action": "select",
+                    "selector": "select[name='custaddresstype']",
+                    "value": "business",
+                },
                 {"action": "click", "selector": "button[type='submit']"},
                 {"action": "wait", "type": "navigation"},
             ],
@@ -55,8 +58,8 @@ DEMO_TASKS = {
     "2": {
         "label": "Login to a demo site",
         "task": "Login to https://the-internet.herokuapp.com/login "
-                "with username=tomsmith and password=SuperSecretPassword!, "
-                "then verify the success message appears.",
+        "with username=tomsmith and password=SuperSecretPassword!, "
+        "then verify the success message appears.",
         "config": {
             "url": "https://the-internet.herokuapp.com/login",
             "consent_statement": "Demo: automated login to public test site.",
@@ -83,18 +86,26 @@ DEMO_TASKS = {
     "3": {
         "label": "Conditional form with if/else",
         "task": "Go to a form at https://httpbin.org/forms/post, "
-                "fill the name field. If there's a phone field, fill it with 555-0123. "
-                "Always click submit at the end.",
+        "fill the name field. If there's a phone field, fill it with 555-0123. "
+        "Always click submit at the end.",
         "config": {
             "url": "https://httpbin.org/forms/post",
             "consent_statement": "Demo: conditional form with test data.",
             "steps": [
-                {"action": "fill", "selector": "input[name='custname']", "value": "Conditional Test"},
+                {
+                    "action": "fill",
+                    "selector": "input[name='custname']",
+                    "value": "Conditional Test",
+                },
                 {
                     "action": "if",
                     "condition": {"selector": "input[name='custtel']", "state": "exist"},
                     "then": [
-                        {"action": "fill", "selector": "input[name='custtel']", "value": "555-0123"},
+                        {
+                            "action": "fill",
+                            "selector": "input[name='custtel']",
+                            "value": "555-0123",
+                        },
                     ],
                 },
                 {"action": "click", "selector": "button[type='submit']"},

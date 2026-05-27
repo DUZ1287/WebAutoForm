@@ -4,16 +4,10 @@ from __future__ import annotations
 
 import re
 
-_EMAIL = re.compile(
-    r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"
-)
+_EMAIL = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
 
 _PHONE = re.compile(
-    r"(?<!\d)"
-    r"(\+?\d{1,3}[\s\-]?)?"
-    r"(\(?\d{2,4}\)?[\s\-]?)?"
-    r"\d{3,4}[\s\-]?\d{4}"
-    r"(?!\d)"
+    r"(?<!\d)" r"(\+?\d{1,3}[\s\-]?)?" r"(\(?\d{2,4}\)?[\s\-]?)?" r"\d{3,4}[\s\-]?\d{4}" r"(?!\d)"
 )
 
 _CN_ID = re.compile(r"\b\d{17}[\dXx]\b")

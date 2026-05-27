@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import threading
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
@@ -79,6 +78,7 @@ def mock_server(mock_form_html: str, tmp_path: Path):
     class Handler(SimpleHTTPRequestHandler):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, directory=str(html_dir), **kwargs)
+
         def log_message(self, format, *args):
             pass
 

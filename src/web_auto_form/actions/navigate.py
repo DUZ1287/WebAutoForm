@@ -10,7 +10,9 @@ def run_navigate(ctx: ActionContext) -> StepResult:
     url = ctx.step.value
     if not url:
         return StepResult(
-            step_index=ctx.step_index, action="navigate", status="failed",
+            step_index=ctx.step_index,
+            action="navigate",
+            status="failed",
             error="navigate requires a URL in the value field",
         )
     ctx.page.goto(url, wait_until="domcontentloaded", timeout=ctx.step.timeout_ms)

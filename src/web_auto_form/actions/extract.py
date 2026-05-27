@@ -10,12 +10,17 @@ def run_extract(ctx: ActionContext) -> StepResult:
     from ..selectors import find_element
 
     loc = find_element(
-        ctx.page, ctx.step.selector or "",
-        ctx.step.selector_fallbacks, ctx.step.selector_type, ctx.step.timeout_ms,
+        ctx.page,
+        ctx.step.selector or "",
+        ctx.step.selector_fallbacks,
+        ctx.step.selector_type,
+        ctx.step.timeout_ms,
     )
     if loc is None:
         return StepResult(
-            step_index=ctx.step_index, action="extract", status="failed",
+            step_index=ctx.step_index,
+            action="extract",
+            status="failed",
             error="element not found",
         )
 
@@ -30,6 +35,8 @@ def run_extract(ctx: ActionContext) -> StepResult:
         content = loc.get_attribute(attr) or ""
 
     return StepResult(
-        step_index=ctx.step_index, action="extract", status="ok",
+        step_index=ctx.step_index,
+        action="extract",
+        status="ok",
         screenshot=content,
     )

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import base64
 import logging
 import time
 from datetime import datetime
@@ -12,8 +11,8 @@ from .actions import ACTION_REGISTRY
 from .actions.base import ActionContext, StepResult
 from .actions.if_branch import evaluate_condition
 from .browser import BrowserManager
-from .models import OptionsConfig, StepConfig, WebAutoFormConfig
-from .redact import redact_text, redact_value_for_log
+from .models import StepConfig, WebAutoFormConfig
+from .redact import redact_text
 from .templates import render, render_dict
 
 logger = logging.getLogger(__name__)
@@ -140,7 +139,9 @@ class Runner:
             if result.status == "failed" and rendered_step.optional:
                 skip_behavior = rendered_step.on_skip
                 if skip_behavior == "abort":
-                    self.errors.append(f"Step {index} ({rendered_step.action}): optional step aborted")
+                    self.errors.append(
+                        f"Step {index} ({rendered_step.action}): optional step aborted"
+                    )
                     self._record_result(result, rendered_step)
                     return
                 elif skip_behavior == "set_default":
@@ -150,7 +151,9 @@ class Runner:
                     self._post_step(index, rendered_step)
                     return
                 else:  # log
-                    logger.warning("Step %d (%s): skipped — %s", index, rendered_step.action, result.error)
+                    logger.warning(
+                        "Step %d (%s): skipped — %s", index, rendered_step.action, result.error
+                    )
                     result.status = "skipped"
                     self._record_result(result, rendered_step)
                     self._post_step(index, rendered_step)
@@ -205,10 +208,12 @@ class Runner:
     def _post_step(self, index: int, step: StepConfig) -> None:
         """Apply step delay and save debug artifacts."""
         if step.screenshot:
-            self.step_screenshots.append({
-                "step": index,
-                "screenshot": self.results[-1].screenshot if self.results else None,
-            })
+            self.step_screenshots.append(
+                {
+                    "step": index,
+                    "screenshot": self.results[-1].screenshot if self.results else None,
+                }
+            )
 
         if self.config.options.debug:
             try:

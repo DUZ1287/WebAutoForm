@@ -66,9 +66,7 @@ class BrowserManager:
         html = self.page.content()
         with open(os.path.join(path, f"step_{step_index}.html"), "w", encoding="utf-8") as f:
             f.write(html)
-        self.page.screenshot(
-            path=os.path.join(path, f"step_{step_index}.png"), full_page=True
-        )
+        self.page.screenshot(path=os.path.join(path, f"step_{step_index}.png"), full_page=True)
 
     def close(self) -> None:
         """Close page, context, browser, and stop Playwright."""

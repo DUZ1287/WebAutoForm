@@ -2,8 +2,8 @@
 
 from unittest.mock import MagicMock
 
-from web_auto_form.actions.base import ActionContext
 from web_auto_form.actions.assertion import run_assert
+from web_auto_form.actions.base import ActionContext
 from web_auto_form.models import OptionsConfig, StepConfig
 
 

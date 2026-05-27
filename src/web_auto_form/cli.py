@@ -71,4 +71,3 @@ def _set_nested(obj: dict, key: str, value: str) -> None:
     for part in parts[:-1]:
         obj = obj.setdefault(part, {})
     obj[parts[-1]] = value
-

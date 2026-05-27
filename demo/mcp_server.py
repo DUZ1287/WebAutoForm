@@ -41,7 +41,7 @@ from web_auto_form import run
 try:
     from mcp.server import Server
     from mcp.server.stdio import stdio_server
-    from mcp.types import Tool, TextContent
+    from mcp.types import TextContent, Tool
 
     HAS_MCP = True
 except ImportError:
@@ -68,6 +68,7 @@ def execute_config(config: dict) -> dict:
 
 
 # ── MCP Mode ────────────────────────────────────────────────────────────────
+
 
 def run_mcp_server() -> None:
     """Run as an MCP server using the official SDK."""
@@ -109,6 +110,7 @@ def run_mcp_server() -> None:
 
 
 # ── Stdio JSON-RPC Fallback ─────────────────────────────────────────────────
+
 
 def run_stdio_server() -> None:
     """Minimal stdio JSON-RPC server for environments without the MCP SDK."""

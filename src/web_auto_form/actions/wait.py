@@ -26,7 +26,9 @@ def run_wait(ctx: ActionContext) -> StepResult:
             ctx.page.wait_for_load_state("domcontentloaded", timeout=ctx.step.timeout_ms)
         except PwTimeout:
             return StepResult(
-                step_index=ctx.step_index, action="wait", status="failed",
+                step_index=ctx.step_index,
+                action="wait",
+                status="failed",
                 error="navigation wait timed out",
             )
         return StepResult(step_index=ctx.step_index, action="wait", status="ok")
@@ -35,14 +37,18 @@ def run_wait(ctx: ActionContext) -> StepResult:
         js_expr = ctx.step.value
         if not js_expr:
             return StepResult(
-                step_index=ctx.step_index, action="wait", status="failed",
+                step_index=ctx.step_index,
+                action="wait",
+                status="failed",
                 error="wait type=function requires a JS expression in value",
             )
         try:
             ctx.page.wait_for_function(js_expr, timeout=ctx.step.timeout_ms)
         except PwTimeout:
             return StepResult(
-                step_index=ctx.step_index, action="wait", status="failed",
+                step_index=ctx.step_index,
+                action="wait",
+                status="failed",
                 error="wait type=function timed out",
             )
         return StepResult(step_index=ctx.step_index, action="wait", status="ok")
@@ -51,12 +57,17 @@ def run_wait(ctx: ActionContext) -> StepResult:
     from ..selectors import find_element
 
     loc = find_element(
-        ctx.page, ctx.step.selector or "",
-        ctx.step.selector_fallbacks, ctx.step.selector_type, ctx.step.timeout_ms,
+        ctx.page,
+        ctx.step.selector or "",
+        ctx.step.selector_fallbacks,
+        ctx.step.selector_type,
+        ctx.step.timeout_ms,
     )
     if loc is None:
         return StepResult(
-            step_index=ctx.step_index, action="wait", status="failed",
+            step_index=ctx.step_index,
+            action="wait",
+            status="failed",
             error="element not found within timeout",
         )
     return StepResult(step_index=ctx.step_index, action="wait", status="ok")
