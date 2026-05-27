@@ -47,12 +47,19 @@ try:
 except ImportError:
     HAS_MCP = False
 
+# ── Schema cache ─────────────────────────────────────────────────────────
+_schema_cache: dict | None = None
+
 
 def load_tool_schema() -> dict:
-    """Load the web_auto_form tool schema."""
+    """Load the web_auto_form tool schema (cached after first read)."""
+    global _schema_cache
+    if _schema_cache is not None:
+        return _schema_cache
     schema_path = PROJECT_ROOT / "web_auto_form_tool.json"
     with open(schema_path, encoding="utf-8") as f:
-        return json.load(f)
+        _schema_cache = json.load(f)
+    return _schema_cache
 
 
 def load_system_prompt() -> str:

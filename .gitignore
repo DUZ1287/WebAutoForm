@@ -29,3 +29,4 @@ test-results/
 Thumbs.db
 .env
 *.tmp
+.claude/

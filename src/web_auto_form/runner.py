@@ -19,6 +19,32 @@ logger = logging.getLogger(__name__)
 
 MAX_NESTING_DEPTH = 3
 
+# ── Diagnostics JS snippet ────────────────────────────────────────────
+# Extracts visible form elements for Agent auto-repair when a step fails.
+_DIAGNOSTICS_JS = """() => {
+  const els = document.querySelectorAll('input, select, textarea, button, [role="button"], [role="radio"], [role="checkbox"], label');
+  const seen = new Set();
+  const items = [];
+  els.forEach(el => {
+    const tag = el.tagName.toLowerCase();
+    const type = el.type || '';
+    const name = el.name || el.getAttribute('name') || '';
+    const id = el.id || '';
+    const placeholder = el.placeholder || el.getAttribute('placeholder') || '';
+    const text = (el.textContent || '').trim().slice(0, 60);
+    const ariaLabel = el.getAttribute('aria-label') || '';
+    const dataTestid = el.getAttribute('data-testid') || '';
+    const classes = (el.className || '').toString().trim().slice(0, 80);
+    const visible = el.offsetParent !== null;
+    const key = tag + '|' + type + '|' + name + '|' + id + '|' + placeholder;
+    if (!seen.has(key)) {
+      seen.add(key);
+      items.push({tag, type, name, id, placeholder, text, ariaLabel, dataTestid, classes, visible});
+    }
+  });
+  return items;
+}"""
+
 
 class Runner:
     """Executes a web_auto_form configuration step by step."""
@@ -86,6 +112,7 @@ class Runner:
                     "duration_ms": r.duration_ms,
                     **({"retries": r.retries} if r.retries > 0 else {}),
                     **({"error": r.error} if r.error else {}),
+                    **({"diagnostics": r.diagnostics} if r.diagnostics else {}),
                 }
                 for r in self.results
             ],
@@ -142,6 +169,8 @@ class Runner:
                     self.errors.append(
                         f"Step {index} ({rendered_step.action}): optional step aborted"
                     )
+                    if self.config.options.diagnose_on_failure:
+                        result.diagnostics = self._capture_diagnostics()
                     self._record_result(result, rendered_step)
                     return
                 elif skip_behavior == "set_default":
@@ -164,6 +193,8 @@ class Runner:
                 time.sleep(self.config.options.step_delay_ms / 1000.0)
                 continue
 
+            if self.config.options.diagnose_on_failure:
+                result.diagnostics = self._capture_diagnostics()
             self._record_result(result, rendered_step)
             return
 
@@ -183,6 +214,13 @@ class Runner:
 
         condition_result = evaluate_condition(ctx)
         branch = step.then_steps if condition_result else step.else_steps
+
+        self.results.append(StepResult(
+            step_index=index,
+            action="if",
+            status="ok",
+            value=f"condition={condition_result}, branch={'then' if condition_result else 'else'}",
+        ))
 
         for sub_idx, sub_step in enumerate(branch):
             self._execute_step(sub_step, index, depth + 1)
@@ -204,6 +242,23 @@ class Runner:
             except Exception:
                 pass
         self.results.append(result)
+
+    def _capture_diagnostics(self) -> dict:
+        """Capture screenshot + visible form elements for Agent self-repair."""
+        diagnostics: dict[str, Any] = {}
+        try:
+            diagnostics["screenshot"] = self.browser_mgr.screenshot()
+        except Exception:
+            pass
+        try:
+            raw = self.browser_mgr.page.evaluate(_DIAGNOSTICS_JS)  # type: ignore[union-attr]
+            if isinstance(raw, list) and len(raw) > 0:
+                diagnostics["form_elements"] = raw[:60]
+            else:
+                diagnostics["form_elements"] = []
+        except Exception:
+            diagnostics["form_elements"] = []
+        return diagnostics
 
     def _post_step(self, index: int, step: StepConfig) -> None:
         """Apply step delay and save debug artifacts."""

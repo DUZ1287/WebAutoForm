@@ -237,7 +237,8 @@
           "debug": { "type": "boolean", "default": false, "description": "When true: save page HTML and screenshot after each step, output full Playwright logs, keep browser open after completion." },
           "debug_output_path": { "type": "string", "default": "./web_auto_form_debug_<timestamp>/", "description": "Directory for debug artifacts (HTML snapshots, screenshots, Playwright logs). Created automatically if it does not exist." },
           "keep_open": { "type": "boolean", "default": false, "description": "Do not close browser after completion. Useful for manual inspection in debug mode." },
-          "upload_enforce_extension": { "type": "boolean", "default": false, "description": "When true, block upload if file_name extension does not match the detected MIME type. When false (default), warn but allow." }
+          "upload_enforce_extension": { "type": "boolean", "default": false, "description": "When true, block upload if file_name extension does not match the detected MIME type. When false (default), warn but allow." },
+          "diagnose_on_failure": { "type": "boolean", "default": true, "description": "When true (default), automatically capture a screenshot and visible form elements when a step fails. Included inline in the results JSON so AI Agents can self-repair selector strategies without re-running." }
         }
       }
     },

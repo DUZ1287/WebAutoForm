@@ -120,6 +120,7 @@ class OptionsConfig(BaseModel):
     debug_output_path: str = "./web_auto_form_debug_<timestamp>/"
     keep_open: bool = False
     upload_enforce_extension: bool = False
+    diagnose_on_failure: bool = True
 
 
 class WebAutoFormConfig(BaseModel):

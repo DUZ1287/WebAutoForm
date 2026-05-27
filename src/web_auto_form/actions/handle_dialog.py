@@ -14,6 +14,7 @@ def run_handle_dialog(ctx: ActionContext) -> StepResult:
             dialog.accept()  # type: ignore[union-attr]
         else:
             dialog.dismiss()  # type: ignore[union-attr]
+        ctx.page.remove_listener("dialog", _handler)
 
     ctx.page.on("dialog", _handler)
     return StepResult(step_index=ctx.step_index, action="handle_dialog", status="ok")

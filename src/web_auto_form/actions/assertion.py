@@ -48,7 +48,6 @@ def _check_state(page: object, selector: str, state: str, timeout_ms: int) -> bo
 def run_assert(ctx: ActionContext) -> StepResult:
     selector = ctx.step.selector or ""
     state = ctx.step.state
-    state not in ("not_exist", "hidden")
     max_retries = ctx.step.max_retries or ctx.options.max_retries
 
     for attempt in range(max_retries + 1):
@@ -72,16 +71,6 @@ def run_assert(ctx: ActionContext) -> StepResult:
 
             time.sleep(ctx.options.step_delay_ms / 1000.0)
             logger.debug("Assert retry %d/%d for step %d", attempt + 1, max_retries, ctx.step_index)
-
-    on_fail = ctx.step.on_fail
-    if on_fail == "continue":
-        return StepResult(
-            step_index=ctx.step_index,
-            action="assert",
-            status="failed",
-            retries=max_retries,
-            error=f"assertion failed: {selector} state={state}",
-        )
 
     return StepResult(
         step_index=ctx.step_index,

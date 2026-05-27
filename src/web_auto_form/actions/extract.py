@@ -38,5 +38,5 @@ def run_extract(ctx: ActionContext) -> StepResult:
         step_index=ctx.step_index,
         action="extract",
         status="ok",
-        screenshot=content,
+        value=content,
     )

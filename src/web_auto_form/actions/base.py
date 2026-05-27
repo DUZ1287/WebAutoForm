@@ -21,7 +21,9 @@ class StepResult:
     duration_ms: float = 0.0
     retries: int = 0
     screenshot: str | None = None
+    value: str | None = None
     error: str | None = None
+    diagnostics: dict | None = None
 
 
 @dataclass

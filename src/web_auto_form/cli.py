@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import sys
 from pathlib import Path
 
@@ -10,14 +11,20 @@ import click
 
 from . import run
 
+logger = logging.getLogger(__name__)
+
 
 @click.group()
 def cli() -> None:
     """web_auto_form — Browser automation for form filling and submission."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+    )
 
 
 @cli.command(name="run")
-@click.argument("config_file", type=click.Path(exists=True))
+@click.argument("config_file", type=click.STRING)
 @click.option("--data", "-d", multiple=True, help="Override data values as key=value pairs.")
 @click.option("--headless/--no-headless", default=None, help="Override headless mode.")
 @click.option("--debug/--no-debug", default=None, help="Override debug mode.")
@@ -29,8 +36,11 @@ def run_cmd(
     debug: bool | None,
     output: str | None,
 ) -> None:
-    """Execute a web_auto_form JSON configuration."""
-    text = Path(config_file).read_text(encoding="utf-8")
+    """Execute a web_auto_form JSON configuration. Use '-' to read JSON from stdin."""
+    if config_file == "-":
+        text = sys.stdin.read()
+    else:
+        text = Path(config_file).read_text(encoding="utf-8")
     config = json.loads(text)
 
     # Apply --data overrides

@@ -72,16 +72,13 @@ def run_upload(ctx: ActionContext) -> StepResult:
     is_temp = local_path != value and (value.startswith(("http://", "https://", "data:")))
 
     try:
-        file_payload = (
-            [
-                {
-                    "name": ctx.step.file_name or os.path.basename(local_path),
-                    "buffer": open(local_path, "rb").read(),
-                }
-            ]
-            if ctx.step.file_name
-            else local_path
-        )
+        if ctx.step.file_name:
+            with open(local_path, "rb") as f:
+                file_payload = [
+                    {"name": ctx.step.file_name, "buffer": f.read()}
+                ]
+        else:
+            file_payload = local_path
         loc.set_input_files(file_payload, timeout=ctx.step.timeout_ms)
     finally:
         if is_temp and os.path.exists(local_path):

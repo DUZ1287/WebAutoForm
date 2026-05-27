@@ -29,7 +29,7 @@ class BrowserManager:
         launch_args: dict[str, Any] = {
             "headless": self._options.headless,
         }
-        if self._options.sandbox:
+        if not self._options.sandbox:
             launch_args["args"] = ["--no-sandbox", "--disable-setuid-sandbox"]
 
         self._browser = self._pw.chromium.launch(**launch_args)
