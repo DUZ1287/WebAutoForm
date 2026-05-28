@@ -37,7 +37,9 @@ class StepConfig(BaseModel):
         "assert",
     ]
     selector: Optional[str] = None
-    selector_type: Optional[Literal["css", "xpath", "id", "name", "placeholder", "data-testid"]] = None
+    selector_type: Optional[Literal["css", "xpath", "id", "name", "placeholder", "data-testid"]] = (
+        None
+    )
     selector_fallbacks: list[str] = Field(default_factory=list)
     value: Optional[str] = None
     file_name: Optional[str] = None
