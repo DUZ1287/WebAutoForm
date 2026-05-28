@@ -30,3 +30,4 @@ Thumbs.db
 .env
 *.tmp
 .claude/
+_clawhub_publish/
