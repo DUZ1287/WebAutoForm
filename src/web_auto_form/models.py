@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -13,9 +13,9 @@ class ConditionConfig(BaseModel):
 
     selector: str
     attribute: str = "textContent"
-    state: Literal["exist", "not_exist", "visible", "hidden", "checked"] | None = None
-    operator: Literal["eq", "ne", "contains", "matches_regex"] | None = None
-    expected_value: str | None = None
+    state: Optional[Literal["exist", "not_exist", "visible", "hidden", "checked"]] = None
+    operator: Optional[Literal["eq", "ne", "contains", "matches_regex"]] = None
+    expected_value: Optional[str] = None
 
 
 class StepConfig(BaseModel):
@@ -36,26 +36,26 @@ class StepConfig(BaseModel):
         "if",
         "assert",
     ]
-    selector: str | None = None
-    selector_type: Literal["css", "xpath", "id", "name", "placeholder", "data-testid"] | None = None
+    selector: Optional[str] = None
+    selector_type: Optional[Literal["css", "xpath", "id", "name", "placeholder", "data-testid"]] = None
     selector_fallbacks: list[str] = Field(default_factory=list)
-    value: str | None = None
-    file_name: str | None = None
+    value: Optional[str] = None
+    file_name: Optional[str] = None
     timeout_ms: int = Field(default=5000, ge=0, le=60000)
     type: Literal["element", "navigation", "timeout", "function"] = "element"
     state: Literal["exist", "not_exist", "visible", "hidden", "enabled", "disabled", "checked"] = (
         "exist"
     )
-    operator: Literal["eq", "ne", "contains", "matches_regex"] | None = None
-    expected_value: str | None = None
+    operator: Optional[Literal["eq", "ne", "contains", "matches_regex"]] = None
+    expected_value: Optional[str] = None
     on_fail: Literal["abort", "continue", "retry"] = "abort"
-    max_retries: int | None = Field(default=None, ge=1, le=5)
-    retry_on: list[str] | None = None
+    max_retries: Optional[int] = Field(default=None, ge=1, le=5)
+    retry_on: Optional[list[str]] = None
     optional: bool = False
     on_skip: Literal["log", "abort", "set_default"] = "log"
     screenshot: bool = False
-    description: str | None = None
-    condition: ConditionConfig | None = None
+    description: Optional[str] = None
+    condition: Optional[ConditionConfig] = None
     then_steps: list[StepConfig] = Field(default_factory=list, alias="then")
     else_steps: list[StepConfig] = Field(default_factory=list, alias="else")
 
@@ -93,7 +93,7 @@ class ExtractFieldConfig(BaseModel):
     name: str
     selector: str
     attribute: str = "text"
-    redact: bool | None = None
+    redact: Optional[bool] = None
 
 
 class ExtractSchemaConfig(BaseModel):
@@ -109,7 +109,7 @@ class OptionsConfig(BaseModel):
     headless: bool = True
     viewport_width: int = 1280
     viewport_height: int = 800
-    user_agent: str | None = None
+    user_agent: Optional[str] = None
     locale: str = "en-US"
     step_delay_ms: int = Field(default=500, ge=100, le=10000)
     max_retries: int = Field(default=1, ge=1, le=5)
