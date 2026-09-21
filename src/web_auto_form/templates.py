@@ -8,6 +8,25 @@ from typing import Any
 _PATTERN = re.compile(r"\{\{([^}]+)\}\}")
 
 
+class TemplateSecurityError(ValueError):
+    """A template placeholder sits in a position that cannot be escaped safely.
+
+    Raised before any browser interaction, and surfaced as ``TEMPLATE_ERROR``.
+    """
+
+
+def has_placeholder(template: str | None) -> bool:
+    """Whether *template* contains a ``{{...}}`` placeholder.
+
+    Callers use this to decide policy from the **configuration** rather than from
+    a rendered string: which rule applies must never be influenced by the data
+    being substituted.
+    """
+    if not template:
+        return False
+    return _PATTERN.search(template) is not None
+
+
 def _lookup(data: dict[str, Any], key: str) -> str:
     """Resolve a dot-notation key like 'user.name' against a nested dict."""
     parts = key.split(".")

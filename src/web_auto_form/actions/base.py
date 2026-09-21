@@ -1,4 +1,14 @@
-"""Shared types for action modules."""
+"""Shared types for action modules.
+
+Contract for every action handler:
+
+* Run **exactly one attempt** and return a :class:`StepResult`. Do not retry,
+  do not loop, do not decide abort/continue/retry — the Runner owns all of that.
+* On failure, return a result built with :func:`failed` so the failure carries a
+  machine-readable :class:`~web_auto_form.errors.ErrorCode`.
+* Let unexpected exceptions propagate; the Runner's exception boundary converts
+  them into structured failures.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +18,7 @@ from typing import Any, Callable, Literal
 
 from playwright.sync_api import Page
 
+from ..errors import ErrorCode, ErrorInfo
 from ..models import OptionsConfig, StepConfig
 
 
@@ -23,6 +34,8 @@ class StepResult:
     screenshot: str | None = None
     value: str | None = None
     error: str | None = None
+    error_code: str | None = None
+    retryable: bool = False
     diagnostics: dict | None = None
 
 
@@ -35,6 +48,23 @@ class ActionContext:
     options: OptionsConfig
     step_index: int
     data: dict[str, Any] = field(default_factory=dict)
+    #: Milliseconds left in the workflow budget when this attempt started.
+    #: Actions that can block for an author-chosen duration (see `wait
+    #: type=timeout`) must clamp to this rather than overrun the workflow.
+    remaining_budget_ms: int | None = None
+
+
+def failed(step_index: int, action: str, code: ErrorCode, message: str) -> StepResult:
+    """Build a failed :class:`StepResult` from a structured error classification."""
+    info = ErrorInfo(code, message)
+    return StepResult(
+        step_index=step_index,
+        action=action,
+        status="failed",
+        error=info.message,
+        error_code=info.code.value,
+        retryable=info.retryable,
+    )
 
 
 def timed(fn: Callable[[ActionContext], StepResult]) -> Callable[[ActionContext], StepResult]:

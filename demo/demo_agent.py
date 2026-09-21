@@ -150,9 +150,11 @@ def run_config(config: dict) -> None:
             print(f"  {key}: {value}")
 
     if result.get("errors"):
-        print(f"\nErrors:")
+        print("\nErrors:")
         for error in result["errors"]:
-            print(f"  - {error}")
+            location = error.get("field") or (f"step {error['step']}" if "step" in error else "")
+            suffix = f" ({location})" if location else ""
+            print(f"  - [{error['code']}] {error['message']}{suffix}")
 
 
 def main() -> None:

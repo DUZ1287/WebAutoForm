@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from .base import ActionContext, StepResult, timed
+from ..errors import ErrorCode
+from .base import ActionContext, StepResult, failed, timed
 
 
 @timed
@@ -17,11 +18,11 @@ def run_scroll(ctx: ActionContext) -> StepResult:
             pixels = int(value)
             ctx.page.mouse.wheel(0, pixels)
         except ValueError:
-            return StepResult(
-                step_index=ctx.step_index,
-                action="scroll",
-                status="failed",
-                error=f"invalid scroll value: {value!r}",
+            return failed(
+                ctx.step_index,
+                ctx.step.action,
+                ErrorCode.UNKNOWN,
+                f"invalid scroll value: {value!r}",
             )
 
     return StepResult(step_index=ctx.step_index, action="scroll", status="ok")

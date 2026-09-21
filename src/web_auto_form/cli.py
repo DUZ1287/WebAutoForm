@@ -10,6 +10,8 @@ from pathlib import Path
 import click
 
 from . import run
+from .errors import ErrorCode, error_entry
+from .runner import failed_output
 
 logger = logging.getLogger(__name__)
 
@@ -37,11 +39,22 @@ def run_cmd(
     output: str | None,
 ) -> None:
     """Execute a web_auto_form JSON configuration. Use '-' to read JSON from stdin."""
-    if config_file == "-":
-        text = sys.stdin.read()
-    else:
-        text = Path(config_file).read_text(encoding="utf-8")
-    config = json.loads(text)
+    try:
+        if config_file == "-":
+            text = sys.stdin.read()
+        else:
+            text = Path(config_file).read_text(encoding="utf-8")
+        config = json.loads(text)
+    except Exception as exc:
+        # Configuration never reached the engine: still emit valid JSON so
+        # callers (scripts, agents) can parse the failure instead of a traceback.
+        _emit(
+            failed_output(
+                [error_entry(ErrorCode.CONFIG_VALIDATION_ERROR, f"{type(exc).__name__}: {exc}")]
+            ),
+            output,
+        )
+        sys.exit(1)
 
     # Apply --data overrides
     if data:
@@ -62,17 +75,30 @@ def run_cmd(
     if debug is not None:
         config.setdefault("options", {})["debug"] = debug
 
-    result = run(config)
+    try:
+        result = run(config)
+    except Exception as exc:
+        # run() already returns a structured result for every execution and
+        # configuration failure; this is only the last-resort boundary so the CLI
+        # still emits parseable JSON instead of a traceback.
+        logger.error("web_auto_form could not execute the configuration", exc_info=True)
+        result = failed_output(
+            [error_entry(ErrorCode.INTERNAL_ERROR, f"{type(exc).__name__}: {exc}")],
+            config.get("consent_statement"),
+        )
 
+    _emit(result, output)
+    sys.exit(0 if result["status"] == "success" else 1)
+
+
+def _emit(result: dict, output: str | None) -> None:
+    """Write the result JSON to a file or stdout."""
     output_json = json.dumps(result, indent=2, ensure_ascii=False)
-
     if output:
         Path(output).write_text(output_json, encoding="utf-8")
         click.echo(f"Output written to {output}")
     else:
         click.echo(output_json)
-
-    sys.exit(0 if result["status"] == "success" else 1)
 
 
 def _set_nested(obj: dict, key: str, value: str) -> None:

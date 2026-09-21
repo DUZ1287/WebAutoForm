@@ -341,8 +341,8 @@ print(result["extracted"])      # {"field_name": "extracted value", ...}
 | `action` | `"assert"` | 是 | — |
 | `selector` | string | 是 | 待验证的元素选择器 |
 | `state` | string | 是 | 期望状态（`exist`, `not_exist`, `visible`, `hidden`, `enabled`, `disabled`, `checked`） |
-| `on_fail` | string | 否 | 失败行为：`abort`（默认）/ `continue` / `retry` |
-| `max_retries` | int | 否 | 步骤级重试次数覆盖（`on_fail=retry` 时有效） |
+| `on_fail` | string | 否 | 失败策略，对所有动作一致：`abort`（默认）/ `continue` / `retry`（重试耗尽后终止） |
+| `max_retries` | int | 否 | 步骤级重试次数覆盖（首次尝试之外的额外次数） |
 | `timeout_ms` | int | 否 | 等待状态满足的超时时间 |
 | `description` | string | 否 | 步骤描述 |
 
@@ -377,7 +377,44 @@ print(result["extracted"])      # {"field_name": "extracted value", ...}
 
 ## 选择器系统
 
-### 自动类型检测
+### 两种写法
+
+| 写法 | 示例 | 状态 |
+|------|------|------|
+| `selector`（字符串） | `{"selector": "#email"}` | 继续支持，行为不变 |
+| `locator`（结构化） | `{"locator": {"strategy": "label", "value": "Email"}}` | 新配置推荐 |
+
+同一个步骤**不能同时**提供 `selector` 与 `locator`（`selector_fallbacks` 与
+`locator_fallbacks` 同理）——引擎不会猜测哪个生效，直接在校验阶段报错。
+
+### 策略表
+
+| strategy | 字段 | 解析为 |
+|----------|------|--------|
+| `role` | `role`, `name`, `exact` | `page.get_by_role()` |
+| `label` / `text` / `placeholder` | `value`, `exact` | `get_by_label()` / `get_by_text()` / `get_by_placeholder()` |
+| `testid` | `value` | `page.get_by_test_id()` |
+| `id` / `name` | `value` | `[id="…"]` / `[name="…"]` |
+| `attr` | `attr`, `op`, `value`, `prefix` | `[attr op "…"]`，可带字面前缀 |
+| `css` / `xpath` | `value` | 原样使用，不允许模板变量 |
+
+```json
+{"action": "fill", "locator": {"strategy": "label", "value": "Email"}, "value": "a@b.com"}
+{"action": "click", "locator": {"strategy": "role", "role": "button", "name": "Submit"}}
+```
+
+`exact: true` 用于避免子串误匹配——Playwright 的文本匹配默认是子串 + 空白归一化，
+`get_by_label("Save")` 也会匹配 "Save and continue"。`id` / `name` / `attr` / `testid`
+始终是精确属性匹配。
+
+### 推荐优先级
+
+1. `role` / `label` / `testid` —— 绑定可访问语义，抗重构
+2. `placeholder` / `text` / `name`
+3. 稳定的 CSS（真实 class 或属性，而非生成式 id）
+4. XPath —— 最后手段
+
+### 自动类型检测（仅用于旧写法）
 
 选择器通过前缀自动检测类型，无需显式声明 `selector_type`：
 
@@ -394,10 +431,13 @@ print(result["extracted"])      # {"field_name": "extracted value", ...}
 
 解析顺序：
 
-1. 尝试主选择器 `selector`
-2. 若主选择器失败，按序尝试 `selector_fallbacks[i]`
+1. 尝试主选择器 `selector` / `locator`
+2. 若未匹配，按序尝试 `selector_fallbacks[i]` / `locator_fallbacks[i]`
 3. 任一选择器匹配，立即使用该元素执行
-4. 仅当 **全部选择器**（主 + 所有 fallback）在 `timeout_ms` 内全部失败时，触发 `optional` 逻辑：
+4. **结构性失败**（选择器语法非法、目标已关闭）会以 `INVALID_SELECTOR` 直接终止整条链，
+   不会静默跳到下一个候选——配置本身写错了，静默兜底会掩盖缺陷，并让行为取决于
+   恰好坏掉的是哪一个候选。只有「单纯没匹配上」才继续下一个候选。
+5. 仅当 **全部选择器**（主 + 所有 fallback）在 `timeout_ms` 内全部失败时，触发 `optional` 逻辑：
    - `optional: true` + `on_skip: "log"` → 记录警告，继续执行
    - `optional: true` + `on_skip: "abort"` → 终止执行
    - `optional: true` + `on_skip: "set_default"` → 使用 `value` 作为 fallback 值，继续执行
@@ -414,10 +454,13 @@ print(result["extracted"])      # {"field_name": "extracted value", ...}
 
 ### 最佳实践
 
-- **优先使用 `data-testid` 或稳定的 CSS class**，避免自动生成的动态 ID（如 `id="input_123456"`）
-- **为关键步骤提供 `selector_fallbacks`**（提交按钮、文件输入等）
-- **XPath 仅用于 CSS 无法表达的关系**（如文本匹配、兄弟节点遍历），CSS 选择器更快、更可读
-- **避免依赖 DOM 位置索引**的脆弱选择器（如 `div > div:nth-child(3) > input`），优先使用语义化属性
+- **优先 `role` / `label` / `testid`** —— 绑定可访问语义，抗 DOM 改名；其次是
+  `placeholder` / `text` / `name`，再次是稳定 CSS，**XPath 放最后**
+- **为关键步骤提供 fallback 链**（提交按钮、文件输入等）
+- **需要模板参数时优先用语义策略**：`{"strategy": "label", "value": "{{field}}"}` 比
+  `"[name='{{field}}']"` 更安全也更抗改版
+- **避免依赖 DOM 位置索引**的脆弱选择器（如 `div > div:nth-child(3) > input`），
+  以及自动生成的动态 ID（如 `id="input_123456"`）
 
 ---
 
@@ -425,7 +468,22 @@ print(result["extracted"])      # {"field_name": "extracted value", ...}
 
 `data` 对象支持 `{{key}}` 语法，通过点号访问嵌套字段。支持的字段包括：`value`, `selector`, `selector_fallbacks`, `file_name`, `description`, `extract_schema.fields[].selector`。
 
-**注入安全**：选择器中的模板变量仅限于属性值位置，运行时校验渲染后的选择器无法逃逸其语法上下文（例如 `[name='{{x}}']` 中的变量将进行 HTML 实体转义）。
+**注入安全**：目标是「不可信数据不能改变定位器的结构，也不能让它指向别的元素」。
+具体怎么做取决于 strategy，因此 strategy 来自配置，**绝不从替换后的文本里猜**：
+
+| strategy | 模板变量 | 处理方式 |
+|----------|----------|----------|
+| `role` / `label` / `text` / `placeholder` / `testid` | 允许 | 作为**参数**传给 `page.get_by_*()`，永不拼进选择器语法 |
+| `id` / `name` / `attr` | 允许 | 限制在 CSS 属性值槽位内，按该上下文转义 |
+| `css` | 仅限属性值槽位，且前缀 / 属性名 / 操作符必须是字面量 | 如 `[name='{{x}}']`、`input[name='{{x}}']` |
+| `xpath` | **不允许** | XPath 1.0 字符串字面量没有转义字符 |
+
+其余位置——`div.{{cls}}`、`//div[@id='{{x}}']`、`[{{attr}}='v']`——在浏览器启动前
+就以 `TEMPLATE_ERROR` 失败。不含模板变量的选择器属于作者配置，原样使用。
+
+另有两个非选择器字段出于同样原因受限：`wait` 的 `type: function`（其 `value` 是页面上下文
+中求值的 JavaScript），以及 `if` 的 `operator: matches_regex`（其 `expected_value`
+会成为正则模式，构造输入可造成灾难性回溯）。
 
 ```json
 {
@@ -512,29 +570,61 @@ web_auto_form run config.json --data user.name=李四 --data target_position="Pr
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `status` | string | `"success"` — 全部步骤成功；`"partial"` — 部分 optional 步骤跳过但无错误；`"failed"` — 存在步骤失败 |
-| `steps_executed` | int | 实际执行的步骤数 |
+| `status` | string | `"success"` — 全部步骤成功，或仅 optional 步骤跳过（记为 `skipped`）；`"partial"` — workflow 跑完但存在 `on_fail=continue` 的非可选失败；`"failed"` — workflow 提前终止（abort、重试耗尽，或引擎不可恢复错误） |
+| `aborted` | bool | `true` 表示 workflow 提前终止，未执行后续步骤 |
+| `steps_executed` | int | 实际执行的步骤数（不含 skipped） |
 | `steps_skipped` | int | 跳过的 optional 步骤数 |
 | `steps_failed` | int | 失败的步骤数 |
-| `results` | array | 每个步骤的执行结果（含耗时） |
+| `results` | array | 每个步骤的执行结果（含耗时；失败步骤额外带 `error_code` / `retryable`） |
 | `extracted` | object | 结构化提取输出（key 来自 `extract_schema.fields[].name`） |
-| `errors` | array | 错误详情列表 |
+| `errors` | array | 失败与终止原因汇总列表 |
 
 ---
 
-## 重试策略
+## 失败语义
 
-区分瞬时错误与永久错误，在全局和步骤两级控制：
+每个失败步骤都会被归类为机器可读的错误码，再由引擎映射为控制流决策。**Action handler 自身从不重试——Runner 是重试的唯一 owner。**
 
-### 错误分类
+### 错误码
 
-| 错误类型 | 行为 | 默认是否重试 |
-|----------|------|-------------|
-| `NETWORK_ERROR` | 连接重置、DNS 失败、网络层超时 | 是 |
-| `TIMEOUT` | 在 `timeout_ms` 内找不到元素、JS 条件未满足 | 否 |
-| `NAVIGATION_FAILED` | 页面未加载、重定向循环、HTTP 5xx | 是 |
-| `ELEMENT_NOT_FOUND` | 所有选择器（主+fallback）均失败且 `optional=false` | 否 |
-| `ASSERTION_FAILED` | `assert` 动作检测到非预期状态 | 取决于 `on_fail` |
+| 错误码 | 含义 |
+|--------|------|
+| `ELEMENT_NOT_FOUND` | 主选择器 + fallback 链在 `timeout_ms` 内均未匹配 |
+| `ELEMENT_NOT_VISIBLE` | 元素存在但始终未变为可见/稳定 |
+| `ELEMENT_NOT_INTERACTABLE` | 元素被遮挡、禁用或位于视口外 |
+| `TIMEOUT` | 无法归因于元素查找或导航的超时 |
+| `NAVIGATION_FAILED` | 页面未加载、重定向循环、frame 脱离 |
+| `NETWORK_ERROR` | 连接重置、DNS 失败、连接被拒绝 |
+| `INVALID_SELECTOR` | 选择器语法非法 |
+| `ASSERTION_FAILED` | `assert` 动作检测到非预期状态 |
+| `FILE_UPLOAD_FAILED` | 上传源缺失/不可读，或文件输入被拒绝 |
+| `TEMPLATE_ERROR` | `{{变量}}` 渲染后产生了非法步骤 |
+| `INTERNAL_ERROR` | 引擎自身抛出的意外错误 |
+| `UNKNOWN` | 未能归类的失败 |
+
+### 失败策略
+
+失败步骤的处理优先级：
+
+1. `optional: true` → 记为 `skipped`，workflow 继续；`on_skip` 细化行为：`log`（默认）/`set_default` 继续，`abort` 终止。
+2. `on_fail: continue` → 记为 `failed`，workflow 继续。
+3. `on_fail: abort`（默认），或 `on_fail: retry` 次数耗尽 → 记为 `failed` 并立即终止。
+
+嵌套 `if` 分支内触发的 abort 会向外传播：该分支剩余步骤与后续所有顶层步骤都不再执行。
+
+### 重试
+
+`max_retries` 是**首次尝试之外**的额外次数：`max_retries: 2` 表示最多执行 3 次，输出中 `retries: 2`。
+
+满足任一条件才会重试：
+
+- 错误码在 `retry_on` 列表中，**且**该错误码本身可重试；
+- 步骤设置了 `on_fail: retry`（显式指令，绕过可重试性判断）。
+
+天生可重试：`TIMEOUT`、`NETWORK_ERROR`、`NAVIGATION_FAILED`、`ELEMENT_NOT_VISIBLE`、`ELEMENT_NOT_INTERACTABLE`。
+永不重试：`ELEMENT_NOT_FOUND`、`INVALID_SELECTOR`、`ASSERTION_FAILED`、`FILE_UPLOAD_FAILED`、`TEMPLATE_ERROR`、`INTERNAL_ERROR`、`UNKNOWN`。
+
+`retry_on` 是**策略**闸门，`retryable` 是错误自身的**属性**——默认 `retry_on: ["NETWORK_ERROR"]` 下超时不会被重试，尽管它本身可重试。重试间隔为 `step_delay_ms`。诊断信息（截图 + 页面表单元素）只在最后一次失败时采集一次。
 
 ### 两级配置
 
@@ -560,9 +650,9 @@ web_auto_form run config.json --data user.name=李四 --data target_position="Pr
 }
 ```
 
-### 断言重试语义
+### 断言语义
 
-当 `on_fail: "retry"` 时，引擎仅重新执行 assert 步骤本身（重新检查元素状态），最多 `max_retries` 次，每次间隔 `step_delay_ms`。全部重试失败后 fallback 为 `abort`。输出 `results` 中记录实际重试次数。
+`assert` 只执行**一次**检查，失败即返回 `ASSERTION_FAILED`，自身没有重试循环。`on_fail` 对它与其他动作完全一致：`abort`（默认）终止 workflow，`continue` 继续执行，`retry` 最多重试 `max_retries` 次、仍失败则终止。输出 `results[].retries` 记录实际重试次数。
 
 ---
 

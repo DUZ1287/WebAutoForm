@@ -34,6 +34,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from web_auto_form import run
+from web_auto_form.errors import ErrorCode, error_entry
+from web_auto_form.runner import failed_output
 
 # ── MCP Server Implementation ──────────────────────────────────────────────
 # Uses the official MCP Python SDK when available, falls back to stdio JSON-RPC.
@@ -70,8 +72,18 @@ def load_system_prompt() -> str:
 
 
 def execute_config(config: dict) -> dict:
-    """Execute a web-auto-form config and return the result."""
-    return run(config)
+    """Execute a web-auto-form config and return the result.
+
+    Never raises. An Agent-facing tool invocation must come back as a structured
+    observation the model can read and correct — a raw traceback escaping here
+    would surface to the model as a transport failure with nothing to act on.
+    """
+    try:
+        return run(config)
+    except Exception as exc:
+        return failed_output(
+            [error_entry(ErrorCode.INTERNAL_ERROR, f"{type(exc).__name__}: {exc}")]
+        )
 
 
 # ── MCP Mode ────────────────────────────────────────────────────────────────

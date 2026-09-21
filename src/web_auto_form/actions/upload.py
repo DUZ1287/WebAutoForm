@@ -9,7 +9,9 @@ import tempfile
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
-from .base import ActionContext, StepResult, timed
+from ..errors import ErrorCode
+from ..selectors import build_locator_chain, find_locator
+from .base import ActionContext, StepResult, failed, timed
 
 logger = logging.getLogger(__name__)
 
@@ -41,30 +43,22 @@ def _resolve_file(value: str, file_name: str | None) -> str:
 
 @timed
 def run_upload(ctx: ActionContext) -> StepResult:
-    from ..selectors import find_element
-
     value = ctx.step.value
     if not value:
-        return StepResult(
-            step_index=ctx.step_index,
-            action="upload",
-            status="failed",
-            error="upload requires a file path/URL in the value field",
+        return failed(
+            ctx.step_index,
+            ctx.step.action,
+            ErrorCode.FILE_UPLOAD_FAILED,
+            "upload requires a file path/URL in the value field",
         )
 
-    loc = find_element(
-        ctx.page,
-        ctx.step.selector or "",
-        ctx.step.selector_fallbacks,
-        ctx.step.selector_type,
-        ctx.step.timeout_ms,
-    )
+    loc = find_locator(ctx.page, build_locator_chain(ctx.step), ctx.step.timeout_ms)
     if loc is None:
-        return StepResult(
-            step_index=ctx.step_index,
-            action="upload",
-            status="failed",
-            error="file input element not found",
+        return failed(
+            ctx.step_index,
+            ctx.step.action,
+            ErrorCode.ELEMENT_NOT_FOUND,
+            "file input element not found",
         )
 
     local_path = _resolve_file(value, ctx.step.file_name)

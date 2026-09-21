@@ -164,7 +164,11 @@ def run_config(config_json: str, headless: bool = True) -> tuple[str, str, str, 
     # Errors
     error_str = ""
     if result.get("errors"):
-        error_str = "\n".join(f"- {e}" for e in result["errors"])
+        error_str = "\n".join(
+            f"- `{e['code']}` {e['message']}"
+            + (f" — field `{e['field']}`" if e.get("field") else "")
+            for e in result["errors"]
+        )
     else:
         error_str = "_No errors._"
 

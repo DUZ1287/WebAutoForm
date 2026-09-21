@@ -131,11 +131,16 @@ print(result["extracted"])    # {"field_name": "extracted value", ...}
 {
     "status": "success",           # success | partial | failed
     "consent_logged": "...",
+    "aborted": False,              # True if the workflow stopped early
     "steps_executed": 14,
     "steps_skipped": 1,
     "steps_failed": 0,
     "results": [
-        {"step": 0, "action": "fill", "status": "ok", "duration_ms": 340}
+        {"step": 0, "action": "fill", "status": "ok", "duration_ms": 340},
+        # failed steps also carry error_code + retryable
+        {"step": 1, "action": "click", "status": "failed", "duration_ms": 5000,
+         "error": "Timeout 5000ms exceeded.", "error_code": "ELEMENT_NOT_VISIBLE",
+         "retryable": True}
     ],
     "extracted": {
         "confirmation_message": "Your application has been submitted."
@@ -199,7 +204,7 @@ print(result["extracted"])    # {"field_name": "extracted value", ...}
 | --- | --- | --- |
 | `wait` | Wait for element, navigation, timeout, or JS expression | `type`, `selector` or `value` |
 | `if` | Conditional branching | `condition`, `then`, `else` (optional) |
-| `assert` | Verify element state with retry | `selector`, `state`, `on_fail` |
+| `assert` | Verify element state — one check, retry via `on_fail` | `selector`, `state`, `on_fail` |
 
 ### Wait subtypes
 
@@ -226,29 +231,82 @@ print(result["extracted"])    # {"field_name": "extracted value", ...}
 
 ---
 
-## Selectors
+## Failure Semantics
 
-Selectors are auto-detected by prefix. You can also set `selector_type` explicitly.
+Every failure is classified into a machine-readable `error_code`
+(`ELEMENT_NOT_FOUND`, `INVALID_SELECTOR`, `TIMEOUT`, `NETWORK_ERROR`,
+`ASSERTION_FAILED`, `FILE_UPLOAD_FAILED`, …) and reported with `retryable`
+alongside the human-readable `error`.
 
-| Prefix | Type |
+`on_fail` decides what happens next:
+
+| `on_fail` | On failure |
 | --- | --- |
-| `//` | XPath |
-| `#` | ID |
-| `[name=` | name attribute |
-| `[placeholder=` | placeholder attribute |
-| `[data-testid=` | data-testid attribute |
-| (default) | CSS selector |
+| `abort` (default) | Record the failure and stop the workflow — later steps do not run |
+| `continue` | Record the failure and keep going; the run ends `partial` |
+| `retry` | Retry up to `max_retries`, then stop the workflow |
+
+`optional: true` overrides all of the above: the step is recorded as `skipped`
+and the workflow continues (`on_skip: abort` is the exception that still stops).
+
+**Retry has a single owner — the engine.** Action handlers run one attempt and
+report the outcome; the engine decides whether to try again. `max_retries`
+counts *additional* attempts, so `max_retries: 2` means at most 3 attempts.
+An error is retried when its code is listed in `retry_on` *and* is intrinsically
+retryable, or when the step sets `on_fail: retry`. An abort raised inside a
+nested `if` propagates out of the branch and stops the whole workflow.
+
+---
+
+## Locators
+
+Two ways to target an element. The string `selector` form keeps working exactly
+as before; the structured `locator` form says *how* to find the element instead
+of relying on a parsed string, and is what new config should use.
 
 ```json
-{
-  "action": "fill",
-  "selector": "#email",
-  "selector_fallbacks": ["[name='email']", "[data-testid='email-input']"],
-  "value": "user@example.com"
-}
+{ "action": "fill", "locator": { "strategy": "label", "value": "Email" }, "value": "a@b.com" }
+{ "action": "click", "locator": { "strategy": "role", "role": "button", "name": "Submit" } }
 ```
 
-The engine tries the primary selector first, then each fallback in order. Only if ALL fail does `optional` logic apply.
+| Strategy | Resolves to |
+| --- | --- |
+| `role`, `label`, `text`, `placeholder`, `testid` | Playwright's native `get_by_*` matchers |
+| `id`, `name`, `attr` | a CSS attribute test |
+| `css`, `xpath` | raw, used verbatim |
+
+**Prefer `role` / `label` / `testid`, then `placeholder` / `text` / `name`, then
+stable CSS, with XPath last.** Semantic locators are tied to accessible meaning,
+so they survive the id and class renames that break brittle selectors.
+
+Legacy `selector` strings are still auto-detected by prefix (`//` XPath, `#` ID,
+`[name=`, `[placeholder=`, `[data-testid=`, else CSS), and `selector_fallbacks`
+still chains backups.
+
+### Template safety
+
+Locators are the one place where untrusted `data` meets a parser, so the rule is
+explicit: **data may fill a value slot, never a grammar position.**
+
+```json
+{ "locator": { "strategy": "label", "value": "{{field}}" } }   // value is an argument
+{ "selector": "input[name='{{field}}']" }                      // value is escaped into the attribute
+```
+
+`role`/`label`/`text`/`placeholder`/`testid` pass the rendered value to
+Playwright as an argument, so it never reaches selector grammar at all. `id`,
+`name` and `attr` escape it into a quoted CSS attribute value. A placeholder
+anywhere else — `div.{{cls}}`, `//div[@id='{{x}}']`, `[{{attr}}='v']` — fails with
+`TEMPLATE_ERROR` before the browser starts. A selector with no placeholder is
+authored config and is used verbatim.
+
+### Fallbacks
+
+The engine tries the primary, then each fallback in order; the first match wins.
+A *structurally* invalid locator (bad syntax) aborts the chain with
+`INVALID_SELECTOR` rather than falling through — a malformed locator means the
+config is wrong, and quietly using a backup would hide it. Only if every
+candidate matches nothing does `optional` logic apply.
 
 ---
 

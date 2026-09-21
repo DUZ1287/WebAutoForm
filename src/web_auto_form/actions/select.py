@@ -2,26 +2,20 @@
 
 from __future__ import annotations
 
-from .base import ActionContext, StepResult, timed
+from ..errors import ErrorCode
+from ..selectors import build_locator_chain, find_locator
+from .base import ActionContext, StepResult, failed, timed
 
 
 @timed
 def run_select(ctx: ActionContext) -> StepResult:
-    from ..selectors import find_element
-
-    loc = find_element(
-        ctx.page,
-        ctx.step.selector or "",
-        ctx.step.selector_fallbacks,
-        ctx.step.selector_type,
-        ctx.step.timeout_ms,
-    )
+    loc = find_locator(ctx.page, build_locator_chain(ctx.step), ctx.step.timeout_ms)
     if loc is None:
-        return StepResult(
-            step_index=ctx.step_index,
-            action="select",
-            status="failed",
-            error="element not found",
+        return failed(
+            ctx.step_index, ctx.step.action, ErrorCode.ELEMENT_NOT_FOUND, "element not found"
         )
-    loc.select_option(label=ctx.step.value, timeout=ctx.step.timeout_ms)
+    # `value` is documented as "option text OR value attribute". Playwright
+    # accepts both criteria in one call, so <option value="eng">Software
+    # Engineer</option> matches either value="eng" or label="eng".
+    loc.select_option(value=ctx.step.value, label=ctx.step.value, timeout=ctx.step.timeout_ms)
     return StepResult(step_index=ctx.step_index, action="select", status="ok")

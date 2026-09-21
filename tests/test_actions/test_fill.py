@@ -2,6 +2,8 @@
 
 from unittest.mock import MagicMock
 
+from playwright.sync_api import TimeoutError as PwTimeout
+
 from web_auto_form.actions.base import ActionContext
 from web_auto_form.actions.fill import run_fill
 from web_auto_form.models import OptionsConfig, StepConfig
@@ -35,7 +37,9 @@ class TestFillAction:
         page = MagicMock()
         loc = MagicMock()
         page.locator.return_value.first = loc
-        loc.wait_for.side_effect = Exception("timeout")
+        # Playwright raises TimeoutError for a selector that never matches; a
+        # non-timeout error is treated as structural and re-raised.
+        loc.wait_for.side_effect = PwTimeout("Timeout 5000ms exceeded.")
         loc.count.return_value = 0
 
         step = StepConfig(action="fill", selector="#missing", value="x")

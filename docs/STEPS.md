@@ -10,13 +10,27 @@ All steps share these optional fields:
 | --- | --- | --- | --- |
 | `action` | string | *required* | The action to perform |
 | `description` | string | `null` | Human-readable label (supports `{{template}}` vars) |
-| `optional` | bool | `false` | Skip without error if element not found |
-| `on_skip` | string | `"log"` | `"log"`, `"abort"`, or `"set_default"` |
+| `optional` | bool | `false` | Record as `skipped` instead of failing the workflow |
+| `on_skip` | string | `"log"` | Only for `optional` steps: `"log"`, `"abort"`, or `"set_default"` |
+| `on_fail` | string | `"abort"` | Failure policy for every action: `"abort"`, `"continue"`, or `"retry"` |
+| `max_retries` | int | global | Additional attempts on top of the first (1–5) |
+| `retry_on` | string[] | global | Error codes eligible for retry, e.g. `["NETWORK_ERROR", "TIMEOUT"]` |
 | `screenshot` | bool | `false` | Capture screenshot after this step |
 | `timeout_ms` | int | `5000` | Max wait for element (0–60000) |
-| `selector` | string | `null` | Element locator (required for most actions) |
+| `selector` | string | `null` | Legacy string locator (required for most actions unless `locator` is given) |
+| `locator` | object | `null` | Structured locator — see [SELECTORS.md](SELECTORS.md). Mutually exclusive with `selector` |
 | `selector_type` | string | auto | `"css"`, `"xpath"`, `"id"`, `"name"`, `"placeholder"`, `"data-testid"` |
 | `selector_fallbacks` | string[] | `[]` | Backup selectors tried in order |
+| `locator_fallbacks` | object[] | `[]` | Backup locators; requires `locator` |
+
+```json
+{"action": "fill", "locator": {"strategy": "label", "value": "Email"}, "value": "a@b.com"}
+{"action": "click", "locator": {"strategy": "role", "role": "button", "name": "Submit"}}
+```
+
+A step may use `selector` or `locator`, never both. Template variables are
+allowed only in positions that can be escaped — see
+[SELECTORS.md](SELECTORS.md#template-safety).
 
 ---
 
@@ -166,14 +180,16 @@ Accept or dismiss browser dialogs (alerts, confirms, prompts).
 
 ### `assert`
 
-Verify element state with retry support.
+Verify element state. Performs **one** check and reports `ASSERTION_FAILED` on a
+miss — it has no retry loop of its own. Retrying is the engine's job, driven by
+`on_fail` / `max_retries` exactly as for every other action.
 
 | Field | Required | Description |
 | --- | --- | --- |
 | `selector` | Yes | Target element |
 | `state` | Yes | `"exist"`, `"not_exist"`, `"visible"`, `"hidden"`, `"enabled"`, `"disabled"`, `"checked"` |
-| `on_fail` | No | `"abort"` (default), `"continue"`, `"retry"` |
-| `max_retries` | No | Override global retry count (1–5) |
+| `on_fail` | No | `"abort"` (default), `"continue"`, `"retry"` — retry re-runs the assert up to `max_retries`, then aborts |
+| `max_retries` | No | Additional attempts on top of the first (1–5) |
 
 ```json
 {"action": "assert", "selector": ".error", "state": "not_exist", "on_fail": "abort"}

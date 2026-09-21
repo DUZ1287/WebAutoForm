@@ -1,21 +1,26 @@
-"""Assert action: verify element state (exist, visible, checked, etc.)."""
+"""Assert action: verify element state (exist, visible, checked, etc.).
+
+The handler performs **exactly one** check and reports ``ASSERTION_FAILED`` on a
+miss. It does not loop and does not decide abort/continue/retry — retry belongs
+to the Runner, driven by ``on_fail`` / ``max_retries`` / ``retry_on`` like every
+other action. See ``runner._should_retry`` and ``runner._apply_failure_policy``.
+"""
 
 from __future__ import annotations
 
 import logging
 
-from .base import ActionContext, StepResult, timed
+from playwright.sync_api import Locator
+
+from ..errors import ErrorCode
+from ..selectors import build_locator_chain, describe_locator, resolve_locator
+from .base import ActionContext, StepResult, failed, timed
 
 logger = logging.getLogger(__name__)
 
 
-def _check_state(page: object, selector: str, state: str, timeout_ms: int) -> bool:
-    """Return True if the element matches the expected state."""
-    from ..selectors import resolve_selector
-
-    resolved = resolve_selector(selector)
-    loc = page.locator(resolved).first  # type: ignore[attr-defined,union-attr]
-
+def _check_state(loc: Locator, state: str, timeout_ms: int) -> bool:
+    """Return True if *loc* matches the expected state."""
     try:
         if state == "exist":
             loc.wait_for(state="attached", timeout=timeout_ms)
@@ -38,44 +43,32 @@ def _check_state(page: object, selector: str, state: str, timeout_ms: int) -> bo
         if state == "disabled":
             loc.wait_for(state="attached", timeout=timeout_ms)
             return bool(loc.is_disabled())
-    except Exception:
-        return state in ("not_exist", "hidden")
+    except Exception as exc:
+        # Every state expresses "the element should be X"; a timeout means it
+        # never became X. That includes the negative states — a timeout waiting
+        # for "detached"/"hidden" means the element is still on the page, so
+        # `not_exist` / `hidden` have *not* been satisfied.
+        logger.debug("assert state check raised: %s", exc)
 
     return False
 
 
 @timed
 def run_assert(ctx: ActionContext) -> StepResult:
-    selector = ctx.step.selector or ""
+    """Verify element state. One check per candidate, no retry loop of its own."""
+    chain = build_locator_chain(ctx.step)
     state = ctx.step.state
-    max_retries = ctx.step.max_retries or ctx.options.max_retries
 
-    for attempt in range(max_retries + 1):
-        actual = _check_state(ctx.page, selector, state, ctx.step.timeout_ms)
+    # Walk the chain rather than using find_locator: a *missing* element is not a
+    # lookup failure here — `not_exist` and `hidden` are satisfied by absence.
+    for spec in chain:
+        loc = resolve_locator(ctx.page, spec).first
+        if _check_state(loc, state, ctx.step.timeout_ms):
+            return StepResult(step_index=ctx.step_index, action=ctx.step.action, status="ok")
 
-        if state in ("not_exist", "hidden"):
-            passed = actual  # actual=True means element is gone
-        else:
-            passed = actual
-
-        if passed:
-            return StepResult(
-                step_index=ctx.step_index,
-                action="assert",
-                status="ok",
-                retries=attempt,
-            )
-
-        if attempt < max_retries:
-            import time
-
-            time.sleep(ctx.options.step_delay_ms / 1000.0)
-            logger.debug("Assert retry %d/%d for step %d", attempt + 1, max_retries, ctx.step_index)
-
-    return StepResult(
-        step_index=ctx.step_index,
-        action="assert",
-        status="failed",
-        retries=max_retries,
-        error=f"assertion failed: {selector} state={state}",
+    return failed(
+        ctx.step_index,
+        ctx.step.action,
+        ErrorCode.ASSERTION_FAILED,
+        f"assertion failed: {describe_locator(chain[0])} state={state}",
     )

@@ -10,6 +10,21 @@ from pathlib import Path
 import pytest
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Register --run-integration.
+
+    Without this the flag does not exist, so the `skipif` conditions consulting
+    `config.getoption("--run-integration")` always resolve to the default and the
+    real-browser tests can never run.
+    """
+    parser.addoption(
+        "--run-integration",
+        action="store_true",
+        default=False,
+        help="Run tests that launch a real browser (needs `playwright install chromium`).",
+    )
+
+
 @pytest.fixture
 def sample_config() -> dict:
     """Minimal valid config dict."""
@@ -51,6 +66,7 @@ def mock_form_html() -> str:
   </div>
   <label><input type="checkbox" id="agree-terms" /> I agree to terms</label>
   <input type="file" id="resume" />
+  <button type="button" id="disabled-btn" disabled>Disabled action</button>
   <button type="submit" id="submit-btn">Submit</button>
 </form>
 <script>
@@ -66,6 +82,59 @@ document.getElementById('application').addEventListener('submit', function(e) {
 </script>
 </body>
 </html>"""
+
+
+@pytest.fixture
+def locator_pages(tmp_path: Path):
+    """Serve two variants of the same page with different ids and classes.
+
+    Semantically identical, structurally renamed — the shape of a routine
+    front-end refactor that breaks positional/id selectors but leaves accessible
+    names alone.
+    """
+    html_dir = tmp_path / "loc"
+    html_dir.mkdir()
+
+    def render(variant: str) -> str:
+        return f"""<!DOCTYPE html>
+<html><body>
+  <form id="{variant}-form">
+    <label for="{variant}-email">Email</label>
+    <input id="{variant}-email" name="email" class="{variant}-input" type="email" />
+    <label for="{variant}-phone">Phone number</label>
+    <input id="{variant}-phone" name="phone" placeholder="Phone number" />
+    <input data-testid="username" name="username" />
+    <select id="{variant}-position">
+      <option value="eng">Software Engineer</option>
+    </select>
+    <button type="button" id="{variant}-submit">Submit</button>
+  </form>
+  <button type="button" id="{variant}-disabled" disabled>Disabled action</button>
+  <div style="position:absolute;top:0;left:0;width:600px;height:600px;
+              background:rgba(0,0,0,.05);z-index:10"></div>
+</body></html>"""
+
+    (html_dir / "before.html").write_text(render("a"), encoding="utf-8")
+    (html_dir / "after.html").write_text(render("z"), encoding="utf-8")
+
+    class Handler(SimpleHTTPRequestHandler):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, directory=str(html_dir), **kwargs)
+
+        def log_message(self, format, *args):
+            pass
+
+    server = HTTPServer(("127.0.0.1", 0), Handler)
+    port = server.server_address[1]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    yield {
+        "before": f"http://127.0.0.1:{port}/before.html",
+        "after": f"http://127.0.0.1:{port}/after.html",
+    }
+
+    server.shutdown()
 
 
 @pytest.fixture

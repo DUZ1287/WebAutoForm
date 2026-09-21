@@ -131,11 +131,16 @@ print(result["extracted"])    # {"字段名": "提取的值", ...}
 {
     "status": "success",           # success | partial | failed
     "consent_logged": "...",
+    "aborted": False,              # True 表示 workflow 提前终止
     "steps_executed": 14,          # 已执行步骤数
     "steps_skipped": 1,            # 跳过的可选步骤数
     "steps_failed": 0,             # 失败步骤数
     "results": [                   # 每步结果
-        {"step": 0, "action": "fill", "status": "ok", "duration_ms": 340}
+        {"step": 0, "action": "fill", "status": "ok", "duration_ms": 340},
+        # 失败步骤额外带 error_code 与 retryable
+        {"step": 1, "action": "click", "status": "failed", "duration_ms": 5000,
+         "error": "Timeout 5000ms exceeded.", "error_code": "ELEMENT_NOT_VISIBLE",
+         "retryable": True}
     ],
     "extracted": {                 # 结构化提取输出
         "confirmation_message": "您的申请已提交成功。"
@@ -199,7 +204,7 @@ print(result["extracted"])    # {"字段名": "提取的值", ...}
 | --- | --- | --- |
 | `wait` | 等待元素、导航、超时或 JS 表达式 | `type`, `selector` 或 `value` |
 | `if` | 条件分支 | `condition`, `then`, `else`（可选） |
-| `assert` | 验证元素状态并支持重试 | `selector`, `state`, `on_fail` |
+| `assert` | 验证元素状态（只检查一次，重试由 `on_fail` 驱动） | `selector`, `state`, `on_fail` |
 
 ### 等待子类型
 
@@ -226,29 +231,65 @@ print(result["extracted"])    # {"字段名": "提取的值", ...}
 
 ---
 
-## 选择器
+## 失败语义
 
-选择器通过前缀自动检测类型，也可显式设置 `selector_type`。
+每个失败都会被归类为机器可读的 `error_code`（`ELEMENT_NOT_FOUND`、`INVALID_SELECTOR`、`TIMEOUT`、`NETWORK_ERROR`、`ASSERTION_FAILED`、`FILE_UPLOAD_FAILED` 等），并在人类可读的 `error` 之外附带 `retryable` 标志。
 
-| 前缀 | 类型 |
+`on_fail` 决定后续行为：
+
+| `on_fail` | 失败时 |
 | --- | --- |
-| `//` | XPath |
-| `#` | ID |
-| `[name=` | name 属性 |
-| `[placeholder=` | placeholder 属性 |
-| `[data-testid=` | data-testid 属性 |
-| （默认） | CSS 选择器 |
+| `abort`（默认） | 记录失败并终止 workflow——后续步骤不再执行 |
+| `continue` | 记录失败并继续；最终状态为 `partial` |
+| `retry` | 最多重试 `max_retries` 次，仍失败则终止 workflow |
+
+`optional: true` 优先级最高：该步骤记为 `skipped`，workflow 继续（`on_skip: abort` 是仍会终止的例外）。
+
+**重试只有一个 owner——引擎本身。** Action handler 只执行一次并回报结果，是否再试由引擎决定。`max_retries` 是**首次尝试之外**的额外次数，`max_retries: 2` 表示最多 3 次。错误码在 `retry_on` 列表中且本身可重试，或步骤设置 `on_fail: retry` 时才会重试。嵌套 `if` 内触发的 abort 会向外传播并终止整个 workflow。
+
+---
+
+## 定位器
+
+定位元素有两种写法。字符串 `selector` 行为完全不变；结构化 `locator` 直接声明
+*怎么找*，而不是依赖对一个字符串的解析，新配置推荐使用。
 
 ```json
-{
-  "action": "fill",
-  "selector": "#email",
-  "selector_fallbacks": ["[name='email']", "[data-testid='email-input']"],
-  "value": "user@example.com"
-}
+{ "action": "fill", "locator": { "strategy": "label", "value": "Email" }, "value": "a@b.com" }
+{ "action": "click", "locator": { "strategy": "role", "role": "button", "name": "Submit" } }
 ```
 
-引擎先尝试主选择器，然后按顺序尝试每个回退选择器。仅当所有选择器都失败时，才触发 `optional` 逻辑。
+| strategy | 解析为 |
+| --- | --- |
+| `role`、`label`、`text`、`placeholder`、`testid` | Playwright 原生 `get_by_*` 匹配器 |
+| `id`、`name`、`attr` | CSS 属性测试 |
+| `css`、`xpath` | 原样使用 |
+
+**优先级：`role` / `label` / `testid` → `placeholder` / `text` / `name` → 稳定 CSS → XPath 最后。**
+语义定位绑定可访问语义，能扛住会击垮脆弱选择器的 id 与 class 改名。
+
+旧的 `selector` 字符串仍按前缀自动检测（`//` XPath、`#` ID、`[name=`、
+`[placeholder=`、`[data-testid=`，其余为 CSS），`selector_fallbacks` 仍可串起回退链。
+
+### 模板安全
+
+定位器是不可信 `data` 与解析器唯一相遇的地方，规则很明确：**数据只能填值槽位，永不能进语法位置。**
+
+```json
+{ "locator": { "strategy": "label", "value": "{{field}}" } }   // 值作为参数传入
+{ "selector": "input[name='{{field}}']" }                      // 值被转义进属性
+```
+
+`role`/`label`/`text`/`placeholder`/`testid` 把渲染后的值作为参数交给 Playwright，
+根本不进入选择器语法。`id`、`name`、`attr` 把它转义进带引号的 CSS 属性值。
+其余任何位置——`div.{{cls}}`、`//div[@id='{{x}}']`、`[{{attr}}='v']`——在浏览器启动前
+就以 `TEMPLATE_ERROR` 失败。不含模板变量的选择器属于作者配置，原样使用。
+
+### 回退链
+
+引擎先尝试主定位器，再按序尝试每个回退；先匹配者胜出。**结构性非法**的定位器
+（语法错误）会以 `INVALID_SELECTOR` 终止整条链，而不是静默跳到下一个——配置写错了，
+静默兜底会掩盖它。仅当所有候选都没匹配上时才触发 `optional` 逻辑。
 
 ---
 

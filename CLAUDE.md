@@ -30,7 +30,11 @@
 - `options.redact_pii` 默认 `true`，自动脱敏敏感信息
 - 单次最多 50 步，if/else 嵌套最多 3 层
 - 使用 `{{variable}}` 模板语法引用数据，支持点号嵌套访问
-- 为关键步骤（提交按钮、文件上传）提供 `selector_fallbacks`
+- 定位元素优先用结构化 `locator`（`role`/`label`/`testid` 最稳），
+  `selector` 字符串继续支持，但**二者不能同时出现**
+- 模板变量只能出现在**值槽位**：定位器请用 `{"strategy": "label", "value": "{{x}}"}`，
+  而不要写 `div.{{cls}}` 或 `//div[@id='{{x}}']`（会在执行前报 `TEMPLATE_ERROR`）
+- 为关键步骤（提交按钮、文件上传）提供 fallback 链
 
 ### Step 3 — 执行
 
@@ -160,9 +164,9 @@ web_auto_form run - <<< '<json>'
 
 - [完整配置参考](SKILL.md#完整配置参考) — 顶层字段、全局选项
 - [13 种 Action 类型详解](SKILL.md#13-种-action-类型详解) — 每种 action 的参数字段表
-- [选择器系统](SKILL.md#选择器系统) — 自动检测、fallback 链、optional 逻辑
+- [选择器系统](SKILL.md#选择器系统) — locator 策略表、模板注入边界、fallback 链
 - [模板变量](SKILL.md#模板变量) — `{{}}` 语法与注入安全
 - [条件分支](SKILL.md#if--条件分支) — 状态条件 vs 值条件
-- [重试策略](SKILL.md#重试策略) — 错误分类、两级配置
+- [失败语义](SKILL.md#失败语义) — 错误码、失败策略、重试归属
 - [调试模式](SKILL.md#调试模式) — 产物说明
 - [限制与上限](SKILL.md#限制与上限) — 硬限制表

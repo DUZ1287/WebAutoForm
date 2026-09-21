@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import re
 
+from ..selectors import normalize_selector, render_locator, resolve_locator
 from .base import ActionContext, StepResult, timed
 
 logger = logging.getLogger(__name__)
@@ -16,10 +17,11 @@ def evaluate_condition(ctx: ActionContext) -> bool:
     if cond is None:
         return False
 
-    from ..selectors import resolve_selector
-
-    resolved = resolve_selector(cond.selector)
-    loc = ctx.page.locator(resolved).first  # type: ignore[union-attr]
+    # The condition selector arrives unrendered (see `Runner._render_step`), so
+    # it goes through the same normalize → render → resolve path as any other
+    # locator and gets the same escaping guarantees.
+    spec = render_locator(normalize_selector(cond.selector), ctx.data)
+    loc = resolve_locator(ctx.page, spec).first
 
     # Value-based comparison takes precedence
     if cond.operator is not None:
