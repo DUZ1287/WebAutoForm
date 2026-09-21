@@ -339,4 +339,4 @@ The tool returns a JSON object:
 `aborted: true` means the workflow stopped early. Failed steps additionally carry
 `error_code` and `retryable`; every failure is also summarised in `errors`.
 
-When `options.debug` is true, `debug_artifacts` contains paths to saved HTML snapshots and full Playwright logs per step, written to `options.debug_output_path`.
+When `options.debug` is true, `debug_artifacts` contains the path where per-step HTML snapshots and screenshots were written (`options.debug_output_path`). Use `options.keep_open: true` to leave the browser open for manual inspection — `debug` does not imply it.

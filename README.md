@@ -43,13 +43,16 @@ Most browser automation tools force you to write code. **web-auto-form** is diff
 | Feature | Description |
 | --- | --- |
 | **13 action types** | navigate, fill, select, check, click, upload, wait, scroll, extract, press_key, handle_dialog, if, assert |
+| **Structured locators** | 10 strategies — `role`, `label`, `testid`, `text`, `placeholder`, `id`, `name`, `attr`, `css`, `xpath` — plus fallback chains |
+| **Injection-safe templating** | untrusted data may fill a value slot but never a grammar position; anything unescapable is refused before the browser starts |
 | **Template variables** | `{{user.name}}` syntax with nested dot-notation from a `data` object |
-| **Selector fallbacks** | Primary selector + backup chain — resilient to DOM changes |
+| **Typed failures** | every failure carries a machine-readable `error_code` and a `retryable` flag |
+| **Failure policy** | `on_fail` drives abort / continue / retry; retry has a single owner — the engine |
 | **Conditional branching** | `if`/`else` with state-based or value-based conditions, up to 3 levels deep |
-| **Assertions** | Verify page state with configurable retry and abort/continue/retry |
+| **Assertions** | Verify page state, with one check per attempt so retries are never double-counted |
 | **PII redaction** | Auto-mask emails, phone numbers, Chinese 18-digit IDs, and SSNs |
 | **Structured extraction** | Extract text, attributes, or HTML from multiple elements into a named dict |
-| **Debug mode** | Per-step screenshots, HTML snapshots, and Playwright trace logs |
+| **Debug mode** | Per-step screenshots and HTML snapshots |
 | **CLI + Python API** | `web_auto_form run` or `from web_auto_form import run` |
 | **LLM tool integration** | Ships with a JSON tool schema and system prompt for AI agents (Claude, Cursor, etc.) |
 
@@ -85,6 +88,10 @@ Run it:
 ```bash
 web_auto_form run my_form.json
 ```
+
+New config should prefer structured `locator`s over `selector` strings — see
+[Locators](#locators) for why (they are both more robust and the only safe way
+to parameterise a locator with template data).
 
 ---
 
@@ -147,9 +154,16 @@ print(result["extracted"])    # {"field_name": "extracted value", ...}
     },
     "step_screenshots": [],
     "final_screenshot": None,
-    "errors": []
+    "errors": [
+        # structured, so a caller can act on the code and the field
+        {"code": "CONFIG_VALIDATION_ERROR", "message": "Field required",
+         "field": "consent_statement", "type": "missing"}
+    ]
 }
 ```
+
+`run()` never raises for a malformed configuration — an invalid config comes
+back as a structured failure the caller can correct, not as a traceback.
 
 ---
 
@@ -171,14 +185,19 @@ print(result["extracted"])    # {"field_name": "extracted value", ...}
 | Option | Default | Description |
 | --- | --- | --- |
 | `headless` | `true` | Run browser in headless mode |
-| `viewport_width` | `1280` | Browser viewport width |
-| `viewport_height` | `800` | Browser viewport height |
+| `viewport_width` / `viewport_height` | `1280` / `800` | Browser viewport |
+| `user_agent` / `locale` | — / `"en-US"` | Custom User-Agent and browser locale |
 | `step_delay_ms` | `500` | Delay between steps (min 100ms) |
-| `max_retries` | `1` | Max retries for retryable errors |
+| `max_total_ms` | `300000` | Whole-workflow budget. The single execution-time knob: steps are not started past it, and a `wait` longer than what remains fails with `TIMEOUT` |
+| `max_retries` | `1` | **Additional** attempts on top of the first, per step (`2` → at most 3 runs) |
+| `retry_on` | `["NETWORK_ERROR"]` | Error codes eligible for automatic retry |
 | `redact_pii` | `true` | Auto-redact PII in logs and extracted output |
-| `debug` | `false` | Save screenshots, HTML snapshots, and trace logs |
+| `debug` | `false` | Save per-step screenshots and HTML snapshots |
+| `debug_output_path` | `"./web_auto_form_debug_<timestamp>/"` | Where debug artifacts go |
 | `sandbox` | `true` | Browser sandbox mode |
 | `keep_open` | `false` | Keep browser open after completion |
+| `upload_enforce_extension` | `false` | Block an upload whose `file_name` extension contradicts the MIME type |
+| `diagnose_on_failure` | `true` | Capture a screenshot plus the page's form elements on the final failed attempt |
 
 ---
 
@@ -189,31 +208,34 @@ print(result["extracted"])    # {"field_name": "extracted value", ...}
 | Action | Description | Required |
 | --- | --- | --- |
 | `navigate` | Open a URL | `value` (URL) |
-| `fill` | Type text into an input | `selector`, `value` |
-| `click` | Click an element | `selector` |
-| `select` | Select a dropdown option by label | `selector`, `value` |
-| `check` | Check or uncheck a checkbox | `selector`, `value` ("true"/"false") |
-| `upload` | Upload a file (local path, URL, or data URI) | `selector`, `value` |
+| `fill` | Type text into an input | *target*, `value` |
+| `click` | Click an element | *target* |
+| `select` | Select a dropdown option by value or label | *target*, `value` |
+| `check` | Check or uncheck a checkbox | *target*, `value` ("true"/"false") |
+| `upload` | Upload a file (local path, URL, or data URI) | *target*, `value` |
 | `press_key` | Press a keyboard key | `value` (e.g. "Enter", "Tab") |
 | `scroll` | Scroll the page | `value` ("up"/"down"/pixels) |
 | `handle_dialog` | Accept or dismiss a browser dialog | `value` ("accept"/"dismiss") |
+
+*target* is either `selector` (a string) or `locator` (structured) — see
+[Locators](#locators). The two are mutually exclusive.
 
 ### Flow Control
 
 | Action | Description | Key Fields |
 | --- | --- | --- |
-| `wait` | Wait for element, navigation, timeout, or JS expression | `type`, `selector` or `value` |
+| `wait` | Wait for element, navigation, timeout, or JS expression | `type`, *target* or `value` |
 | `if` | Conditional branching | `condition`, `then`, `else` (optional) |
-| `assert` | Verify element state — one check, retry via `on_fail` | `selector`, `state`, `on_fail` |
+| `assert` | Verify element state — one check per attempt, retry via `on_fail` | *target*, `state`, `on_fail` |
 
 ### Wait subtypes
 
 | Type | Behavior | `value` |
 | --- | --- | --- |
-| `element` (default) | Poll until selector appears | — |
+| `element` (default) | Poll until the target appears | — |
 | `navigation` | Wait for page load | — |
-| `timeout` | Unconditional sleep | Duration in ms as string (e.g. `"3000"`) |
-| `function` | Poll until JS expression returns truthy | JS expression string |
+| `timeout` | Unconditional sleep, capped by the remaining `max_total_ms` budget | Duration in ms as string (e.g. `"3000"`) |
+| `function` | Poll until JS expression returns truthy | JS expression string — **no template variables** |
 
 ### Condition types
 
@@ -422,15 +444,16 @@ Configuration: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 
 ```text
 web-auto-form/
-├── src/web_auto_form/       # Core package
+├── src/web_auto_form/
 │   ├── __init__.py          # Public API: run(), run_from_path()
 │   ├── cli.py               # Click CLI
 │   ├── browser.py           # Playwright browser lifecycle
-│   ├── models.py            # Pydantic validation models
-│   ├── runner.py            # Step execution engine
+│   ├── models.py            # Pydantic schema: StepConfig, LocatorSpec, options
+│   ├── runner.py            # Execution engine: step loop, retry, failure policy
+│   ├── errors.py            # Error codes, exception classification, retryability
+│   ├── selectors.py         # Locator normalize → render → resolve, fallback chain
+│   ├── templates.py         # {{variable}} rendering and its safety rules
 │   ├── redact.py            # PII redaction (regex-based)
-│   ├── selectors.py         # Selector detection & resolution
-│   ├── templates.py         # {{variable}} rendering
 │   └── actions/             # 13 action handlers
 │       ├── navigate.py      # page.goto
 │       ├── fill.py          # input fill
@@ -445,13 +468,12 @@ web-auto-form/
 │       ├── handle_dialog.py # dialog accept/dismiss
 │       ├── if_branch.py     # conditional evaluation
 │       └── assertion.py     # state verification
-├── tests/                   # Unit + integration tests
+├── tests/                   # Unit tests + real-browser suite (--run-integration)
 ├── docs/                    # Reference documentation
+├── demo/                    # Interactive demo + MCP server
 ├── examples/                # Example configs
 ├── playground/              # Gradio-based online playground
 ├── pyproject.toml           # Build & tool config
-├── requirements.txt         # Runtime dependencies
-├── Makefile                 # Dev shortcuts
 ├── web_auto_form_tool.json  # JSON tool schema (LLM integration)
 ├── SYSTEM_PROMPT.md         # AI agent integration guide
 └── .github/workflows/ci.yml # CI pipeline

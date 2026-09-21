@@ -164,7 +164,7 @@ print(result["extracted"])      # {"field_name": "extracted value", ...}
 | `retry_on` | string[] | `["NETWORK_ERROR"]` | 全局可重试错误类型列表 |
 | `sandbox` | bool | `true` | 浏览器沙箱模式 |
 | `redact_pii` | bool | `true` | 全局 PII 脱敏开关（日志 + 提取输出） |
-| `debug` | bool | `false` | 保存每步截图、HTML 快照和 Playwright trace |
+| `debug` | bool | `false` | 保存每步截图与 HTML 快照 |
 | `debug_output_path` | string | `"./web_auto_form_debug_<timestamp>/"` | 调试产物输出目录 |
 | `keep_open` | bool | `false` | 完成后保持浏览器打开 |
 | `upload_enforce_extension` | bool | `false` | 当 `file_name` 扩展名与 MIME 不匹配时是否阻止上传 |
@@ -664,8 +664,8 @@ web_auto_form run config.json --data user.name=李四 --data target_position="Pr
 |------|------|
 | **每步截图** | PNG 格式，记录每个步骤执行后的页面状态 |
 | **HTML 快照** | 每个步骤执行后的完整 DOM 快照 |
-| **Playwright Trace** | 完整的 Playwright 追踪日志，可用 `playwright show-trace` 回放 |
-| **浏览器保持打开** | `debug` 模式下默认 `keep_open: true`，便于手动检查 |
+
+手动检查页面用 `options.keep_open: true` 保持浏览器打开（默认 `false`，`debug` 模式同样不会自动开启）。
 
 ---
 
@@ -682,7 +682,7 @@ web_auto_form run config.json --data user.name=李四 --data target_position="Pr
 | **隐私脱敏** | **内置** — 自动脱敏邮箱、电话、身份证号 | 手动处理 | 手动处理 | 手动处理 |
 | **条件逻辑** | JSON 声明式 `if`/`else` | 代码驱动 | 代码驱动 | 提示词驱动 |
 | **选择器韧性** | 自动检测 + fallback 链 | 手动处理 | 手动处理 | LLM 驱动（不可靠） |
-| **调试产物** | 每步自动截图 + HTML 快照 + Playwright Trace | Trace viewer | 手动截图 | 有限 |
+| **调试产物** | 每步自动截图 + HTML 快照 | Trace viewer | 手动截图 | 有限 |
 | **单次运行成本** | 免费（本地执行） | 免费 | 免费 | 每步产生 LLM API 费用 |
 
 **选型一句话：**

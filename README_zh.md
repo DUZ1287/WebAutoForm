@@ -43,13 +43,16 @@
 | 特性 | 说明 |
 | --- | --- |
 | **13 种动作** | navigate, fill, select, check, click, upload, wait, scroll, extract, press_key, handle_dialog, if, assert |
+| **结构化定位器** | 10 种 strategy——`role`、`label`、`testid`、`text`、`placeholder`、`id`、`name`、`attr`、`css`、`xpath`——外加回退链 |
+| **模板注入防护** | 不可信数据只能填值槽位，永不进语法位置；无法转义的写法在浏览器启动前就被拒绝 |
 | **模板变量** | `{{user.name}}` 语法，支持嵌套点号访问 |
-| **选择器回退** | 主选择器 + 备用链，DOM 变化时自动容错 |
+| **结构化错误** | 每个失败都带机器可读的 `error_code` 与 `retryable` 标志 |
+| **失败策略** | `on_fail` 驱动 abort / continue / retry；重试只有一个 owner——引擎本身 |
 | **条件分支** | `if`/`else`，支持基于状态或基于值的条件，最多 3 层嵌套 |
-| **断言** | 验证页面状态，支持可配置重试和 abort/continue/retry |
+| **断言** | 验证页面状态，每次尝试只检查一次，重试不会被重复计数 |
 | **隐私脱敏** | 自动脱敏邮箱、电话、中国 18 位身份证号、美国 SSN |
 | **结构化提取** | 从多个元素提取文本、属性或 HTML 到命名结果字典 |
-| **调试模式** | 每步自动截图、HTML 快照和 Playwright 追踪日志 |
+| **调试模式** | 每步自动截图与 HTML 快照 |
 | **双接口** | `web_auto_form run` CLI 或 `from web_auto_form import run` Python API |
 | **LLM 工具集成** | 内置 JSON 工具模式和系统提示，可直接被 AI Agent（Claude、Cursor 等）调用 |
 
@@ -85,6 +88,9 @@ playwright install chromium
 ```bash
 web_auto_form run my_form.json
 ```
+
+新配置建议优先用结构化 `locator` 而非 `selector` 字符串——原因见[定位器](#定位器)
+（既更抗改版，也是唯一能安全地用模板变量参数化的写法）。
 
 ---
 
@@ -147,9 +153,15 @@ print(result["extracted"])    # {"字段名": "提取的值", ...}
     },
     "step_screenshots": [],
     "final_screenshot": None,
-    "errors": []
+    "errors": [                    # 结构化，调用方可直接按 code / field 处理
+        {"code": "CONFIG_VALIDATION_ERROR", "message": "Field required",
+         "field": "consent_statement", "type": "missing"}
+    ]
 }
 ```
+
+`run()` 对配置错误**不会抛异常**——非法配置以结构化失败返回，调用方可以直接修正，
+而不是收到一段 traceback。
 
 ---
 
@@ -171,14 +183,19 @@ print(result["extracted"])    # {"字段名": "提取的值", ...}
 | 选项 | 默认值 | 说明 |
 | --- | --- | --- |
 | `headless` | `true` | 无头模式运行浏览器 |
-| `viewport_width` | `1280` | 浏览器视口宽度 |
-| `viewport_height` | `800` | 浏览器视口高度 |
+| `viewport_width` / `viewport_height` | `1280` / `800` | 浏览器视口 |
+| `user_agent` / `locale` | — / `"en-US"` | 自定义 User-Agent 与浏览器 locale |
 | `step_delay_ms` | `500` | 步骤间延迟（最小 100ms） |
-| `max_retries` | `1` | 可重试错误的最大重试次数 |
+| `max_total_ms` | `300000` | 整个 workflow 的预算。唯一的执行时长旋钮：超过它不再启动新步骤，`wait` 超出剩余预算直接以 `TIMEOUT` 失败 |
+| `max_retries` | `1` | 每步**首次尝试之外**的额外次数（`2` → 最多执行 3 次） |
+| `retry_on` | `["NETWORK_ERROR"]` | 允许自动重试的错误码 |
 | `redact_pii` | `true` | 在日志和提取输出中自动脱敏 |
-| `debug` | `false` | 保存截图、HTML 快照和追踪日志 |
+| `debug` | `false` | 保存每步截图与 HTML 快照 |
+| `debug_output_path` | `"./web_auto_form_debug_<timestamp>/"` | 调试产物输出目录 |
 | `sandbox` | `true` | 浏览器沙盒模式 |
 | `keep_open` | `false` | 完成后保持浏览器打开 |
+| `upload_enforce_extension` | `false` | `file_name` 扩展名与 MIME 类型矛盾时阻止上传 |
+| `diagnose_on_failure` | `true` | 在最后一次失败时采集截图与页面表单元素 |
 
 ---
 
@@ -189,31 +206,34 @@ print(result["extracted"])    # {"字段名": "提取的值", ...}
 | 动作 | 说明 | 必填字段 |
 | --- | --- | --- |
 | `navigate` | 打开 URL | `value` (URL) |
-| `fill` | 在输入框中输入文本 | `selector`, `value` |
-| `click` | 点击元素 | `selector` |
-| `select` | 按标签选择下拉选项 | `selector`, `value` |
-| `check` | 选中或取消复选框 | `selector`, `value` ("true"/"false") |
-| `upload` | 上传文件（本地路径、URL 或 data URI） | `selector`, `value` |
+| `fill` | 在输入框中输入文本 | *target*, `value` |
+| `click` | 点击元素 | *target* |
+| `select` | 按 value 或标签选择下拉选项 | *target*, `value` |
+| `check` | 选中或取消复选框 | *target*, `value` ("true"/"false") |
+| `upload` | 上传文件（本地路径、URL 或 data URI） | *target*, `value` |
 | `press_key` | 按下键盘按键 | `value`（如 "Enter", "Tab"） |
 | `scroll` | 滚动页面 | `value`（"up"/"down"/像素值） |
 | `handle_dialog` | 接受或关闭浏览器对话框 | `value`（"accept"/"dismiss"） |
+
+*target* 是 `selector`（字符串）或 `locator`（结构化）之一，详见[定位器](#定位器)。
+二者互斥。
 
 ### 流程控制
 
 | 动作 | 说明 | 关键字段 |
 | --- | --- | --- |
-| `wait` | 等待元素、导航、超时或 JS 表达式 | `type`, `selector` 或 `value` |
+| `wait` | 等待元素、导航、超时或 JS 表达式 | `type`, *target* 或 `value` |
 | `if` | 条件分支 | `condition`, `then`, `else`（可选） |
-| `assert` | 验证元素状态（只检查一次，重试由 `on_fail` 驱动） | `selector`, `state`, `on_fail` |
+| `assert` | 验证元素状态（每次尝试只检查一次，重试由 `on_fail` 驱动） | *target*, `state`, `on_fail` |
 
 ### 等待子类型
 
 | 类型 | 行为 | `value` |
 | --- | --- | --- |
-| `element`（默认） | 轮询直到选择器出现 | — |
+| `element`（默认） | 轮询直到目标出现 | — |
 | `navigation` | 等待页面加载 | — |
-| `timeout` | 无条件等待 | 毫秒数字符串（如 `"3000"`） |
-| `function` | 轮询直到 JS 表达式返回真值 | JS 表达式字符串 |
+| `timeout` | 无条件等待，受剩余 `max_total_ms` 预算约束 | 毫秒数字符串（如 `"3000"`） |
+| `function` | 轮询直到 JS 表达式返回真值 | JS 表达式字符串——**不允许模板变量** |
 
 ### 条件类型
 
@@ -405,15 +425,16 @@ GitHub Actions，Python 3.9–3.12（Ubuntu）：
 
 ```text
 web-auto-form/
-├── src/web_auto_form/       # 核心包
+├── src/web_auto_form/
 │   ├── __init__.py          # 公共 API：run(), run_from_path()
 │   ├── cli.py               # Click CLI
 │   ├── browser.py           # Playwright 浏览器生命周期
-│   ├── models.py            # Pydantic 验证模型
-│   ├── runner.py            # 步骤执行引擎
+│   ├── models.py            # Pydantic 模型：StepConfig、LocatorSpec、全局选项
+│   ├── runner.py            # 执行引擎：步骤循环、重试、失败策略
+│   ├── errors.py            # 错误码、异常分类、可重试性
+│   ├── selectors.py         # 定位器 normalize → render → resolve 与回退链
+│   ├── templates.py         # {{变量}} 渲染及其安全规则
 │   ├── redact.py            # PII 脱敏（基于正则）
-│   ├── selectors.py         # 选择器检测与解析
-│   ├── templates.py         # {{变量}} 渲染
 │   └── actions/             # 13 个动作处理器
 │       ├── navigate.py      # page.goto
 │       ├── fill.py          # 输入填写
@@ -428,13 +449,12 @@ web-auto-form/
 │       ├── handle_dialog.py # 对话框接受/关闭
 │       ├── if_branch.py     # 条件求值
 │       └── assertion.py     # 状态验证
-├── tests/                   # 单元测试 + 集成测试
+├── tests/                   # 单元测试 + 真实浏览器套件（--run-integration）
 ├── docs/                    # 参考文档
+├── demo/                    # 交互式演示 + MCP server
 ├── examples/                # 示例配置
 ├── playground/              # Gradio 在线 Playground
 ├── pyproject.toml           # 构建与工具配置
-├── requirements.txt         # 运行时依赖
-├── Makefile                 # 开发快捷命令
 ├── web_auto_form_tool.json  # JSON 工具模式（LLM 集成）
 ├── SYSTEM_PROMPT.md         # AI Agent 集成指南
 └── .github/workflows/ci.yml # CI 管道
